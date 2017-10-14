@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     int fail_id = -1;
     stringstream filename(ios_base::out);
     string traf_file_name;
-    
+    Logfile * logfile;
     if (argc > 1) {
       int i = 1;
       if (!strcmp(argv[1],"-o")){
@@ -125,11 +125,12 @@ int main(int argc, char **argv) {
       }
         
         traf_file_name = argv[i];
+        srand(time(NULL));
+        logfile = new Logfile(filename.str(), eventlist);
+    }else{
+        cout<<"wrong arguments!"<<endl;
+        exit(1);
     }
-    srand(time(NULL));
-
-    //Logfile 
-    Logfile logfile(filename.str(), eventlist);
 
 #if PRINT_PATHS
     filename << ".paths";
@@ -143,12 +144,12 @@ int main(int argc, char **argv) {
     int tot_subs = 0;
     int cnt_con = 0;
 
-    lg = &logfile;
+    lg = logfile;
 
-    logfile.setStartTime(timeFromSec(0));
+    logfile->setStartTime(timeFromSec(0));
 
     SinkLoggerSampling sinkLogger = SinkLoggerSampling(timeFromMs(10), eventlist);
-    logfile.addLogger(sinkLogger);
+    logfile->addLogger(sinkLogger);
 
     //TcpLoggerSimple logTcp;logfile.addLogger(logTcp);
 
@@ -175,7 +176,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef FAT_TREE
-    FatTreeTopology* top = new FatTreeTopology(&logfile, &eventlist,ff, fail_id);
+    FatTreeTopology* top = new FatTreeTopology(logfile, &eventlist,ff, fail_id);
 #endif
 
 #ifdef OV_FAT_TREE
@@ -388,10 +389,10 @@ int main(int argc, char **argv) {
                             tcpSnk->set_super_id(connID);
 
                             tcpSrc->setName("mtcp_" + ntoa(src) + "_" + ntoa(inter) + "_" + ntoa(dest)+"("+ntoa(connection)+")");
-                            logfile.writeName(*tcpSrc);
+                            logfile->writeName(*tcpSrc);
 
                             tcpSnk->setName("mtcp_sink_" + ntoa(src) + "_" + ntoa(inter) + "_" + ntoa(dest)+ "("+ntoa(connection)+")");
-                            logfile.writeName(*tcpSnk);
+                            logfile->writeName(*tcpSnk);
 
                             tcpRtxScanner.registerTcp(*tcpSrc);
 
@@ -415,7 +416,7 @@ int main(int argc, char **argv) {
                             
                             if (inter == 0) {
                                 mtcp->setName("multipath" + ntoa(src) + "_" + ntoa(dest)+"("+ntoa(connection)+")");
-                                logfile.writeName(*mtcp);
+                                logfile->writeName(*mtcp);
                             }
                             
                             tcpSrc->connect(*routeout, *routein, *tcpSnk, timeFromMs(extrastarttime));
@@ -438,13 +439,13 @@ int main(int argc, char **argv) {
     }
 
     int pktsize = TcpPacket::DEFAULTDATASIZE;
-    logfile.write("# pktsize=" + ntoa(pktsize) + " bytes");
-    logfile.write("# subflows=" + ntoa(subflow_count));
-    logfile.write("# hostnicrate = " + ntoa(HOST_NIC) + " pkt/sec");
-    logfile.write("# corelinkrate = " + ntoa(HOST_NIC*CORE_TO_HOST) + " pkt/sec");
-    //logfile.write("# buffer = " + ntoa((double) (queues_na_ni[0][1]->_maxsize) / ((double) pktsize)) + " pkt");
+    logfile->write("# pktsize=" + ntoa(pktsize) + " bytes");
+    logfile->write("# subflows=" + ntoa(subflow_count));
+    logfile->write("# hostnicrate = " + ntoa(HOST_NIC) + " pkt/sec");
+    logfile->write("# corelinkrate = " + ntoa(HOST_NIC*CORE_TO_HOST) + " pkt/sec");
+    //logfile->write("# buffer = " + ntoa((double) (queues_na_ni[0][1]->_maxsize) / ((double) pktsize)) + " pkt");
     double rtt = timeAsSec(timeFromUs(RTT));
-    logfile.write("# rtt =" + ntoa(rtt));
+    logfile->write("# rtt =" + ntoa(rtt));
 
     // GO!
     while (eventlist.doNextEvent()) {

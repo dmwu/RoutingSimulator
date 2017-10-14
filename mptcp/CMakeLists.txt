@@ -1,7 +1,7 @@
 # Create a library called "mptcp" which includes the source files
 # The extension is already found. Any number of sources could be listed here.
 file(GLOB HEADERS *.h)
-add_library (mptcp eventlist.cpp tcppacket.cpp pipe.cpp tcp.cpp mtcp.cpp loggers.cpp
+add_library (mptcp eventlist.cpp tcppacket.cpp pipe.cpp queue.cpp tcp.cpp mtcp.cpp loggers.cpp
         logfile.cpp clock.cpp config.cpp network.cpp qcn.cpp exoqueue.cpp randomqueue.cpp
         cbr.cpp cbrpacket.cpp tcp_periodic.cpp tcp_transfer.cpp ${HEADERS})
 
