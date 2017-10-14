@@ -66,7 +66,6 @@ void print_path(std::ofstream &paths,route_t* rt){
     else 
       paths << "NULL ";
   }
-
   paths<<endl;
 }
 
@@ -83,72 +82,63 @@ int main(int argc, char **argv) {
     if (argc > 1) {
       int i = 1;
       if (!strcmp(argv[1],"-o")){
-	filename << argv[2];
-	i+=2;
+	    filename << argv[2];
+	    i+=2;
       }
       else
-	filename << "logout.dat";
+	    filename << "logout.dat";
 
       if (argc>i&&!strcmp(argv[i],"-sub")){
-	subflow_count = atoi(argv[i+1]);
-	i+=2;
+	    subflow_count = atoi(argv[i+1]);
+	    i+=2;
       }
 
       if (argc>i&&!strcmp(argv[i],"-param")){
-	param = atoi(argv[i+1]);
-	i+=2;
+	    param = atoi(argv[i+1]);
+	    i+=2;
       }
-      //cout << "Using subflow count " << subflow_count <<endl;
 
       if (argc>i&&!strcmp(argv[i],"-fail")){
-	fail_id = atoi(argv[i+1]);
-	i+=2;
+	    fail_id = atoi(argv[i+1]);
+	    i+=2;
       }
-      //cout << "Topology File: " << rfile << endl;
 
       if (argc>i+1){
-	epsilon = -1;
-	if (!strcmp(argv[i], "UNCOUPLED"))
-	  algo = UNCOUPLED;
-	else if (!strcmp(argv[i], "COUPLED_INC"))
-	  algo = COUPLED_INC;
-	else if (!strcmp(argv[i], "FULLY_COUPLED"))
-	  algo = FULLY_COUPLED;
-	else if (!strcmp(argv[i], "COUPLED_TCP"))
-	  algo = COUPLED_TCP;
-	else if (!strcmp(argv[i], "COUPLED_SCALABLE_TCP"))
-	  algo = COUPLED_SCALABLE_TCP;
-	else if (!strcmp(argv[i], "COUPLED_EPSILON")) {
-	  algo = COUPLED_EPSILON;
-	  if (argc > i+1)
-	    epsilon = atof(argv[i+1]);
-	  printf("Using epsilon %f\n", epsilon);
-	} else
-	  exit_error(argv[0]);
+        epsilon = -1;
+        if (!strcmp(argv[i], "UNCOUPLED"))
+          algo = UNCOUPLED;
+        else if (!strcmp(argv[i], "COUPLED_INC"))
+          algo = COUPLED_INC;
+        else if (!strcmp(argv[i], "FULLY_COUPLED"))
+          algo = FULLY_COUPLED;
+        else if (!strcmp(argv[i], "COUPLED_TCP"))
+          algo = COUPLED_TCP;
+        else if (!strcmp(argv[i], "COUPLED_SCALABLE_TCP"))
+          algo = COUPLED_SCALABLE_TCP;
+        else if (!strcmp(argv[i], "COUPLED_EPSILON")) {
+            algo = COUPLED_EPSILON;
+            if (argc > i+1)
+            epsilon = atof(argv[i+1]);
+            printf("Using epsilon %f\n", epsilon);
+        } else
+            exit_error(argv[0]);
       }
         
         traf_file_name = argv[i];
     }
     srand(time(NULL));
-    //srand(0);
 
-    //cout <<  "Using algo="<<algo<< " epsilon=" << epsilon << endl;
-    // prepare the loggers
-
-    //cout << "Logging to " << filename.str() << endl;
     //Logfile 
     Logfile logfile(filename.str(), eventlist);
 
 #if PRINT_PATHS
     filename << ".paths";
-    //cout << "Logging path choices to " << filename.str() << endl;
     std::ofstream paths(filename.str().c_str());
     if (!paths){
-      //cout << "Can't open for writing paths file!"<<endl;
+      cout << "Can't open for writing paths file!"<<endl;
       exit(1);
     }
 #endif
-
 
     int tot_subs = 0;
     int cnt_con = 0;
@@ -259,21 +249,20 @@ int main(int argc, char **argv) {
         pos = line.find(" ", pos);
         string str = line.substr(i, pos-i);
         simtime_picosec time = (simtime_picosec)(atof(str.c_str())*1000000);
-	extrastarttime = atof(str.c_str());
+	    extrastarttime = atof(str.c_str());
 	//cout << "extrastarttime = " << extrastarttime << endl;
         i = ++pos;
         pos = line.find(" ", pos);
         str = line.substr(i, pos-i);
         int mapper_n = atoi(str.c_str());
         vector<int> mappers;
-	vector<int> mappers_sw;
+	    vector<int> mappers_sw;
         for (int k = 0; k < mapper_n; k++) {
             i = ++pos;
             pos = line.find(" ", pos);
             str = line.substr(i, pos-i);
-	    mappers.push_back(top->generate_server(atoi(str.c_str()), rack_n));
-	    mappers_sw.push_back(atoi(str.c_str()));
-            //mappers.push_back(atoi(str.c_str()));
+	        mappers.push_back(top->generate_server(atoi(str.c_str()), rack_n));
+	        mappers_sw.push_back(atoi(str.c_str()));
         }
         i = ++pos;
         pos = line.find(" ", pos);
@@ -291,21 +280,13 @@ int main(int argc, char **argv) {
             string sub = str.substr(0, posi);
             int reducer = atoi(sub.c_str());
             sub = str.substr(posi+1, str.length());
-            //uint64_t volume = (uint64_t)atof(sub.c_str())*8/mappers.size()*1000000;
             uint64_t volume = (uint64_t)(atof(sub.c_str())/mappers.size()*1000000);
-	    //cout << "vol = " << volume << endl;
-            // TO BE DELETED
-            //if (mapper_n*reducer_n < 30)
-              //volume = volume * 100;
-            
-	    //int dest = reducer;
+
             int dest = top->generate_server(reducer, rack_n);
-	    int dest_sw = dest/(K/2);
+	        int dest_sw = dest/(K/2);
             for (int t = 0; t < mappers.size(); t++) {
-                //cout << mappers[t] << " --> " << reducer << ": " << volume << " " << endl;
                 int src = mappers[t];
-		int src_sw = src/(K/2);
-                
+		        int src_sw = src/(K/2);
                 connID++;
                 uint64_t* curnt_sent = new uint64_t;
                 *curnt_sent = 0;
@@ -322,102 +303,25 @@ int main(int argc, char **argv) {
                     //cout << "Getting paths from topo" << endl;
                     net_paths[src][dest] = top->get_paths(src,dest);
                 }
-
-                //if (!net_paths[src][dest]) {
-                    //continue;
-                //}
-                
-                // Ankit: Check if we got paths
-                //cout << "How many paths? = " << net_paths[src][dest]->size() << endl;
-                //for (unsigned int k = 0; k < net_paths[src][dest]->size(); k++) {
-                //cout << "Length of path " << k << " = "<< (net_paths[src][dest]->at(k)->size() - 5) / 2 << endl;
-                // (net_paths[src][dest]->at(k));
-                //RandomQueue* q = (RandomQueue*)rt->at(i);
-                //}
-                
-                /*bool cbr = 1;
-                 if (cbr){
-                 cbrSrc = new CbrSrc(eventlist,speedFromPktps(7999),timeFromMs(0),timeFromMs(0));
-                 cbrSnk = new CbrSink();
-                 
-                 cbrSrc->setName("cbr_" + ntoa(src) + "_" + ntoa(dest)+"_"+ntoa(dst_id));
-                 logfile.writeName(*cbrSrc);
-                 
-                 cbrSnk->setName("cbr_sink_" + ntoa(src) + "_" + ntoa(dest)+"_"+ntoa(dst_id));
-                 logfile.writeName(*cbrSnk);
-                 
-                 // tell it the route
-                 if (net_paths[src][dest]->size()==1){
-                 choice = 0;
-                 }
-                 else {
-                 choice = rand()%net_paths[src][dest]->size();
-                 }
-                 
-                 routeout = new route_t(*(net_paths[src][dest]->at(choice)));
-                 routeout->push_back(cbrSnk);
-                 
-                 cbrSrc->connect(*routeout, *cbrSnk, timeFromMs(0));
-                 }*/
                 
                 {
-                    //we should create multiple connections. How many?
-                    //if (connID%3!=0)
-                    //continue;
-                    
                     for (int connection=0;connection<1;connection++){
                         if (algo == COUPLED_EPSILON)
                             mtcp = new MultipathTcpSrc(algo, eventlist, NULL, epsilon);
                         else
                             mtcp = new MultipathTcpSrc(algo, eventlist, NULL);
-                        
-                        //uint64_t bb = generateFlowSize();
-                        
-                        //	    if (subflow_control)
-                        //subflow_control->add_flow(src,dest,mtcp);
+
                         
                         subflows_chosen.clear();
                         
                         unsigned int it_sub;
                         unsigned int crt_subflow_count = subflow_count;
-                        //tot_subs += crt_subflow_count;
-                        //cnt_con ++;
-                        
+
                         it_sub = crt_subflow_count > net_paths[src][dest]->size()?net_paths[src][dest]->size():crt_subflow_count;
                         
                         unsigned int use_all = it_sub==net_paths[src][dest]->size();
-                        //if (connID%10!=0)
-                        //it_sub = 1;
-                        
-                        // Ankit: Do we run the below for_loop?
-                        //cout << "Value of it_sub = " << it_sub << endl;
-                        
-                        //cout << "it_sub = " << it_sub << endl;
                         unsigned int choice = 0;
                         for (unsigned int inter = 0; inter < it_sub; inter++) {
-			    /*
-                            //	      if (connID%10==0){
-                            tcpSrc = new TcpSrc(NULL, NULL, eventlist, flows_sent[connID], flows_recv[connID], volume, flows_finish[connID], time, (uint16_t)connID);
-                            tcpSnk = new TcpSink();
-                            // yiting
-                            tcpSnk->set_super_id(connID);
-                            //}
-                             //else {
-                             //tcpSrc = new TcpSrcTransfer(NULL,NULL,eventlist,bb,net_paths[src][dest]);
-                             //tcpSnk = new TcpSinkTransfer();
-                             //}
-                            
-                            //if (connection==1)
-                            //tcpSrc->set_app_limit(9000);
-                            
-                            tcpSrc->setName("mtcp_" + ntoa(src) + "_" + ntoa(inter) + "_" + ntoa(dest)+"("+ntoa(connection)+")");
-                            logfile.writeName(*tcpSrc);
-                            
-                            tcpSnk->setName("mtcp_sink_" + ntoa(src) + "_" + ntoa(inter) + "_" + ntoa(dest)+ "("+ntoa(connection)+")");
-                            logfile.writeName(*tcpSnk);
-                            
-                            tcpRtxScanner.registerTcp(*tcpSrc);
-			    */                            
 
 #ifdef FAT_TREE
                             choice = rand()%net_paths[src][dest]->size();
@@ -468,18 +372,13 @@ int main(int argc, char **argv) {
                             } else
                                 choice = rand()%net_paths[src][dest]->size();
 #endif
-                            // Ankit: Which path out of available paths is chosen
-                            //cout << "Choice "<<choice<<" out of "<<net_paths[src][dest]->size();
 
-			    if (!check_null(net_paths[src][dest]->at(choice))) {
-				//cout << "failed_server: " << src << " -> " << dest << " vol: " << volume << " time: " << time << endl;
-                                cout << "coflow_id: " << coflow_id << " sw: " << src_sw << " -> " << dest_sw << " vol: " << volume/1000000 << " time: " << time/1000000 << endl;
+			                if (!check_null(net_paths[src][dest]->at(choice))) {
+                                cout << "coflow_id: " << coflow_id << " sw: " << src_sw << " -> " << dest_sw
+                                     << " vol: " << volume/1000000 << " time: " << time/1000000 << endl;
                                 cout << "dropped flow " << connID << endl;
-				continue;
-			    }
-			    //else {
-				//cout << src << "->"<< dest << " OK" << endl;
-			    //}
+				                continue;
+			                }
                             
                             subflows_chosen.push_back(choice);
                             
@@ -487,9 +386,6 @@ int main(int argc, char **argv) {
                             tcpSnk = new TcpSink();
                             // yiting
                             tcpSnk->set_super_id(connID);
-
-                            //if (connection==1)
-                            //tcpSrc->set_app_limit(9000);
 
                             tcpSrc->setName("mtcp_" + ntoa(src) + "_" + ntoa(inter) + "_" + ntoa(dest)+"("+ntoa(connection)+")");
                             logfile.writeName(*tcpSrc);
@@ -514,9 +410,6 @@ int main(int argc, char **argv) {
                             
                             routein = new route_t();
                             routein->push_back(tcpSrc);
-                            //extrastarttime = 50 * drand();
-                            
-                            //join multipath connection
                             
                             mtcp->addSubflow(tcpSrc);
                             
@@ -532,10 +425,9 @@ int main(int argc, char **argv) {
                             cout << "Using PACKET SCATTER!!!!"<<endl<<end;
 #endif
                             
-                            if (ff&&!inter)
+                            if ( ff&&!inter )
                                 ff->add_flow(src,dest,tcpSrc);
-                            
-                            //sinkLogger.monitorSink(tcpSnk);
+
                         }
                     }
                 }
@@ -544,12 +436,7 @@ int main(int argc, char **argv) {
         
         //cout << endl;
     }
-    
-    //ShortFlows* sf = new ShortFlows(2560, eventlist, net_paths,conns,lg, &tcpRtxScanner);
 
-    //cout << "Mean number of subflows " << ntoa((double)tot_subs/cnt_con)<<endl;
-
-    // Record the setup
     int pktsize = TcpPacket::DEFAULTDATASIZE;
     logfile.write("# pktsize=" + ntoa(pktsize) + " bytes");
     logfile.write("# subflows=" + ntoa(subflow_count));
@@ -563,6 +450,7 @@ int main(int argc, char **argv) {
     while (eventlist.doNextEvent()) {
     }
 }
+
 
 string ntoa(double n) {
     stringstream s;
@@ -585,12 +473,6 @@ bool check_null(route_t* rt){
     }
 
   if (fail){
-    //    cout <<"Null queue in route"<<endl;
-    //for (unsigned int i=1;i<rt->size()-1;i+=2)
-      //printf("%p ",rt->at(i));
-
-    //cout<<endl;
-    //assert(0);
     return false;
   }
   return true;

@@ -15,8 +15,7 @@ void RandomQueue::set_packet_loss_rate(double l){
   _plr = l;
 }
 
-void
-RandomQueue::receivePacket(Packet& pkt) 
+void RandomQueue::receivePacket(Packet& pkt)
 {
   double drop_prob = 0;
   int crt = _queuesize+pkt.size();

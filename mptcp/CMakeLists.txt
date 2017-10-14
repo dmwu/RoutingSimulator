@@ -7,4 +7,4 @@ add_library (mptcp eventlist.cpp tcppacket.cpp pipe.cpp tcp.cpp mtcp.cpp loggers
 
 # Make sure the compiler can find include files for our mptcp library
 # when other libraries or executables link to mptcp
-target_include_directories (mptcp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories (mptcp PUBLIC ${PROJECT_SOURCE_DIR}/mptcp)

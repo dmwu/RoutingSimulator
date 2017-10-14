@@ -10,16 +10,14 @@ Queue::Queue(linkspeed_bps bitrate, mem_b maxsize, EventList& eventlist, QueueLo
 	}
 
 
-void
-Queue::beginService()
-	{
+void Queue::beginService()
+{
 	assert(!_enqueued.empty());
 	eventlist().sourceIsPendingRel(*this, drainTime(_enqueued.back()));
-	}
+}
 
-void
-Queue::completeService()
-	{
+void Queue::completeService()
+{
 	assert(!_enqueued.empty());
 	Packet* pkt = _enqueued.back();
 	_enqueued.pop_back();
@@ -29,18 +27,16 @@ Queue::completeService()
 	pkt->sendOn();
 	if (!_enqueued.empty())
 		beginService();
-	}
+}
 
-void
-Queue::doNextEvent() 
-	{
+void Queue::doNextEvent()
+{
 	completeService();
-	}
+}
 
 
-void
-Queue::receivePacket(Packet& pkt) 
-	{
+void Queue::receivePacket(Packet& pkt)
+{
 	if (_queuesize+pkt.size() > _maxsize) {
 		if (_logger) _logger->logQueue(*this, QueueLogger::PKT_DROP, pkt);
 		pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_DROP);
@@ -56,4 +52,4 @@ Queue::receivePacket(Packet& pkt)
 		assert(_enqueued.size()==1);
 		beginService();
 		}
-	}
+}

@@ -260,28 +260,25 @@ vector<route_t*>* FatTreeTopology::get_paths(int src, int dest){
   //cout << "*** dest pod sw = " << HOST_POD_SWITCH(dest) << endl;
 
   if (HOST_POD_SWITCH(src)==HOST_POD_SWITCH(dest)){
-    Queue* pqueue = new Queue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER), *eventlist, NULL);
-    pqueue->setName("PQueue_" + ntoa(src) + "_" + ntoa(dest));
-    //logfile->writeName(*pqueue);
-  
-    routeout = new route_t();
-    routeout->push_back(pqueue);
+        Queue* pqueue = new Queue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER), *eventlist, NULL);
+        pqueue->setName("PQueue_" + ntoa(src) + "_" + ntoa(dest));
+        //logfile->writeName(*pqueue);
 
-    //cout << "src: " << src << " switch: " << HOST_POD_SWITCH(src) << endl;
-    //cout << "dest: " << dest << " switch: " << HOST_POD_SWITCH(dest) << endl;
+        routeout = new route_t();
+        routeout->push_back(pqueue);
 
-    routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
-    routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
+        //cout << "src: " << src << " switch: " << HOST_POD_SWITCH(src) << endl;
+        //cout << "dest: " << dest << " switch: " << HOST_POD_SWITCH(dest) << endl;
 
-    routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
-    routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+        routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
+        routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
 
-    paths->push_back(routeout);
+        routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+        routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
 
-    //if (check_non_null(routeout))
-      return paths;
-    //else
-      //return NULL;
+        paths->push_back(routeout);
+        return paths;
+
   }
   else if (HOST_POD(src)==HOST_POD(dest)){
     //don't go up the hierarchy, stay in the pod only.
@@ -327,68 +324,66 @@ vector<route_t*>* FatTreeTopology::get_paths(int src, int dest){
     return paths;
   }
   else {
-    int pod = HOST_POD(src);
+      int pod = HOST_POD(src);
+      for (int upper = MIN_POD_ID(pod);upper <= MAX_POD_ID(pod); upper++) {
+          int link_index = node_to_link(HOST_POD_SWITCH(src), upper+NK);
+          if (you_failed_suckas[link_index] == 1 && REROUTE == 1) {
+            //cout << "link_id = " << link_id << endl;
+            continue;
+          }
 
-    for (int upper = MIN_POD_ID(pod);upper <= MAX_POD_ID(pod); upper++) {
-      int link_index = node_to_link(HOST_POD_SWITCH(src), upper+NK);
-      if (you_failed_suckas[link_index] == 1 && REROUTE == 1) {
-        //cout << "link_id = " << link_id << endl;
-        continue;
-      }
+          for (int core = (upper%(K/2)) * K / 2; core < ((upper % (K/2)) + 1)*K/2; core++){
+            //cout << "upper = " << upper << " core = " << core << endl;
+            int link_id = node_to_link(upper+NK, core+2*NK);
+            if (you_failed_suckas[link_id] == 1 && REROUTE == 1) {
+              //cout << "linke_id = " << link_id << endl;
+              continue;
+            }
 
-      for (int core = (upper%(K/2)) * K / 2; core < ((upper % (K/2)) + 1)*K/2; core++){
-        //cout << "upper = " << upper << " core = " << core << endl;
-        int link_id = node_to_link(upper+NK, core+2*NK);
-        if (you_failed_suckas[link_id] == 1 && REROUTE == 1) {
-          //cout << "linke_id = " << link_id << endl;
-          continue;
-        }
+            //upper is nup
+            Queue* pqueue = new Queue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER), *eventlist, NULL);
+            pqueue->setName("PQueue_" + ntoa(src) + "_" + ntoa(dest));
+            //logfile->writeName(*pqueue);
 
-	//upper is nup
-	Queue* pqueue = new Queue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER), *eventlist, NULL);
-	pqueue->setName("PQueue_" + ntoa(src) + "_" + ntoa(dest));
-	//logfile->writeName(*pqueue);
-	
-	routeout = new route_t();
-	routeout->push_back(pqueue);
-	
-    //cout << "src: " << src << " switch: " << HOST_POD_SWITCH(src) << endl;
-    //cout << "dest: " << dest << " switch: " << HOST_POD_SWITCH(dest) << endl;
+            routeout = new route_t();
+            routeout->push_back(pqueue);
 
-	routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
-	routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
-	
-	routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][upper]);
-	routeout->push_back(pipes_nlp_nup[HOST_POD_SWITCH(src)][upper]);
-	
-	routeout->push_back(queues_nup_nc[upper][core]);
-	routeout->push_back(pipes_nup_nc[upper][core]);
-	
-	//now take the only link down to the destination server!
-	
-	int upper2 = HOST_POD(dest)*K/2 + 2 * core / K;
-	//printf("K %d HOST_POD(%d) %d core %d upper2 %d\n",K,dest,HOST_POD(dest),core, upper2);
+            //cout << "src: " << src << " switch: " << HOST_POD_SWITCH(src) << endl;
+            //cout << "dest: " << dest << " switch: " << HOST_POD_SWITCH(dest) << endl;
 
-        int link_id1 = node_to_link(HOST_POD_SWITCH(dest), upper2+NK);
-        int link_id2 = node_to_link(upper2+NK, core+2*NK);
-        if (REROUTE == 1 && (you_failed_suckas[link_id1] == 1 || you_failed_suckas[link_id2] == 1)) {
-          //cout << "link_id = " << link_id << endl;
-          continue;
-        }
-	
-	routeout->push_back(queues_nc_nup[core][upper2]);
-	routeout->push_back(pipes_nc_nup[core][upper2]);
-	
-	routeout->push_back(queues_nup_nlp[upper2][HOST_POD_SWITCH(dest)]);
-	routeout->push_back(pipes_nup_nlp[upper2][HOST_POD_SWITCH(dest)]);
-	
-	routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
-	routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
-	
-	paths->push_back(routeout);
-	//if (!check_non_null(routeout))
-          //return NULL;
-      }
+            routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
+            routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
+
+            routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][upper]);
+            routeout->push_back(pipes_nlp_nup[HOST_POD_SWITCH(src)][upper]);
+
+            routeout->push_back(queues_nup_nc[upper][core]);
+            routeout->push_back(pipes_nup_nc[upper][core]);
+
+            //now take the only link down to the destination server!
+
+            int upper2 = HOST_POD(dest)*K/2 + 2 * core / K;
+            //printf("K %d HOST_POD(%d) %d core %d upper2 %d\n",K,dest,HOST_POD(dest),core, upper2);
+            int link_id1 = node_to_link(HOST_POD_SWITCH(dest), upper2+NK);
+            int link_id2 = node_to_link(upper2+NK, core+2*NK);
+            if (REROUTE == 1 && (you_failed_suckas[link_id1] == 1 || you_failed_suckas[link_id2] == 1)) {
+              //cout << "link_id = " << link_id << endl;
+              continue;
+            }
+
+            routeout->push_back(queues_nc_nup[core][upper2]);
+            routeout->push_back(pipes_nc_nup[core][upper2]);
+
+            routeout->push_back(queues_nup_nlp[upper2][HOST_POD_SWITCH(dest)]);
+            routeout->push_back(pipes_nup_nlp[upper2][HOST_POD_SWITCH(dest)]);
+
+            routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+            routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+
+            paths->push_back(routeout);
+            //if (!check_non_null(routeout))
+                  //return NULL;
+          }
     }
     return paths;
   }
@@ -513,7 +508,6 @@ int FatTreeTopology::node_to_link (int node1, int node2) {
       int core_in_group = (node2-2*NK) % (K/2);
       result = (K*NK/2+(node1-NK)*K/2+core_in_group);
    }
-
    return result;
 }
 
