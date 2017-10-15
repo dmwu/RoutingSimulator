@@ -57,7 +57,8 @@ TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger,
 }
 
 TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger, 
-	       EventList &eventlist, uint64_t *total_sent, uint64_t *total_received, uint64_t volume, bool *finish, simtime_picosec start, int super_id)
+	       EventList &eventlist, uint64_t *total_sent, uint64_t *total_received,
+               uint64_t volume, bool *finish, simtime_picosec start_ms, int super_id)
   : EventSource(eventlist,"tcp"),  _logger(logger), _flow(pktlogger)
 {
 	_mss = TcpPacket::DEFAULTDATASIZE;
@@ -86,7 +87,7 @@ TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger,
     _flow_total_received = total_received;
     _flow_volume = volume;
     _flow_finish = finish;
-    _flow_start_time = start;
+    _flow_start_time = start_ms;
     _super_id = super_id;
 
 #ifdef PACKET_SCATTER
@@ -125,12 +126,11 @@ void TcpSrc::set_app_limit(int pktps){
    send_packets();
 }
 
-void 
-TcpSrc::startflow() {
+void TcpSrc::startflow() {
 	_cwnd = _mss;
 	_unacked = _cwnd;
 	send_packets();
-	}
+}
 
 uint32_t TcpSrc::effective_window(){
   return _in_fast_recovery?_ssthresh:_cwnd;
@@ -145,8 +145,7 @@ void TcpSrc::replace_route(route_t* newroute){
   //  printf("Wiating for ack %d to delete\n",_last_packet_with_old_route);
 }
 
-void 
-TcpSrc::connect(route_t& routeout, route_t& routeback, TcpSink& sink, simtime_picosec starttime) {
+void TcpSrc::connect(route_t& routeout, route_t& routeback, TcpSink& sink, simtime_picosec starttime) {
   _route = &routeout;
 
   assert(_route);
@@ -186,9 +185,9 @@ TcpSrc::receivePacket(Packet& pkt)
     if (_rtt>0){
       uint64_t abs;
       if (m>_rtt)
-	abs = m - _rtt;
+	    abs = m - _rtt;
       else
-	abs = _rtt - m;
+	    abs = _rtt - m;
 
       _mdev = 3 * _mdev / 4 + abs/4;
       _rtt = 7*_rtt/8 + m/8;
@@ -210,8 +209,7 @@ TcpSrc::receivePacket(Packet& pkt)
     if (_old_route){
       if (seqno >= _last_packet_with_old_route){
 	//delete _old_route;
-	_old_route = NULL;
-	//printf("Deleted old route\n");
+	    _old_route = NULL;
       }
     }
     _RFC2988_RTO_timeout = eventlist().now() + _rto;// RFC 2988 5.3
@@ -226,17 +224,14 @@ TcpSrc::receivePacket(Packet& pkt)
       //clear timers
       
       // yiting
-      //cout << "id: " << _super_id << " recv: " << *_flow_total_received << endl;
-      //cout << "seqno: " << seqno << " ack: " << _last_acked << endl;
       *_flow_total_received += (seqno - _last_acked);
       if (_flow_volume != 0 && *_flow_total_received >= _flow_volume && *_flow_finish == false) {
          //cout << "id: " << _super_id << " recv: " << *_flow_total_received << endl;
          *_flow_finish = true;
-	 //uint64_t comp_time = eventlist().now()/1e9-_flow_start_time/1e6;
-	 double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
-         double rate = _flow_volume * 8 * 1e3 / comp_time;         
-
-         cout << "flow " << _super_id << " comp time: " << comp_time << " start: " << (double)_flow_start_time/1e6 << " end: " << (double)eventlist().now()/1e9 << " rate: " << rate << endl;
+	    //uint64_t comp_time = eventlist().now()/1e9-_flow_start_time/1e6;
+          double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
+          double rate = _flow_volume * 8 * 1e3 / comp_time;
+          cout << "flow " << _super_id << " comp time: " << comp_time << " start: " << (double)_flow_start_time/1e6 << " end: " << (double)eventlist().now()/1e9 << " rate: " << rate << endl;
          return;
       }
  
@@ -259,18 +254,12 @@ TcpSrc::receivePacket(Packet& pkt)
       _unacked = _cwnd;
       _effcwnd = _cwnd;
       // yiting
-      //cout << "id: " << _super_id << " recv: " << *_flow_total_received << endl;
-      //cout << "seqno: " << seqno << " ack: " << _last_acked << endl;
       *_flow_total_received += (seqno - _last_acked);
-       if (_flow_volume != 0 && *_flow_total_received >= _flow_volume && *_flow_finish == false) {
-            //cout << "id: " << _super_id << " recv: " << *_flow_total_received << endl;
+        if (_flow_volume != 0 && *_flow_total_received >= _flow_volume && *_flow_finish == false) {
             *_flow_finish = true;
-            //uint64_t comp_time = eventlist().now()/1e9-_flow_start_time/1e6;
-	    double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
-            double rate = _flow_volume * 8 * 1e3 / comp_time;            
-
+	        double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
+            double rate = _flow_volume * 8 * 1e3 / comp_time;
             cout << "flow " << _super_id << " comp time: " << comp_time << " start: " << (double)_flow_start_time/1e6 << " end: " << (double)eventlist().now()/1e9 << " rate: " << rate << endl;
-            //cout << "flow " << _super_id << " comp time: " << comp_time << " rate: " << rate << endl;
             return;
         }
         
@@ -287,20 +276,14 @@ TcpSrc::receivePacket(Packet& pkt)
     // got lost, not just the one that triggered FR.
     uint32_t new_data = seqno - _last_acked;
     // yiting
-    //cout << "id: " << _super_id << " recv: " << *_flow_total_received << endl;
-    //cout << "seqno: " << seqno << " ack: " << _last_acked << endl;
     *_flow_total_received += (seqno - _last_acked);
-      if (_flow_volume != 0 && *_flow_total_received >= _flow_volume && *_flow_finish == false) {
-          //cout << "id: " << _super_id << " recv: " << *_flow_total_received << endl;
-          *_flow_finish = true;
-          //uint64_t comp_time = eventlist().now()/1e9-_flow_start_time/1e6;
-	  double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
-          double rate = _flow_volume * 8 * 1e3 / comp_time;
-          
-          cout << "flow " << _super_id << " comp time: " << comp_time << " start: " << (double)_flow_start_time/1e6 << " end: " << (double)eventlist().now()/1e9 << " rate: " << rate << endl;
-          //cout << "flow " << _super_id << " comp time: " << comp_time << " rate: " << rate << endl;
+    if (_flow_volume != 0 && *_flow_total_received >= _flow_volume && *_flow_finish == false) {
+            *_flow_finish = true;
+	        double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
+            double rate = _flow_volume * 8 * 1e3 / comp_time;
+            cout << "flow " << _super_id << " comp time: " << comp_time << " start: " << (double)_flow_start_time/1e6 << " end: " << (double)eventlist().now()/1e9 << " rate: " << rate << endl;
           return;
-      }
+    }
       
     _last_acked = seqno;
     if (new_data < _cwnd) _cwnd -= new_data; else _cwnd=0;
@@ -329,7 +312,7 @@ TcpSrc::receivePacket(Packet& pkt)
   _dupacks++;
 
 #ifdef PACKET_SCATTER
-  if (_dupacks!=DUPACK_TH) { // not yet serious worry
+  if (_dupacks!=DUPACK_TH) { //not yet serious worry
 #else
   if (_dupacks!=3) { // not yet serious worry
 #endif
@@ -356,9 +339,7 @@ TcpSrc::receivePacket(Packet& pkt)
     _ssthresh = _mSrc->deflate_window(_cwnd,_mss);
   }
   
-  
-
-    if (_sawtooth>0)
+  if (_sawtooth>0)
     _rtt_avg = _rtt_cum/_sawtooth;
   else
     _rtt_avg = timeFromMs(0);
@@ -374,7 +355,8 @@ TcpSrc::receivePacket(Packet& pkt)
   _recoverq = _highest_sent; // _recoverq is the value of the
   // first ACK that tells us things
   // are back on track
-  if (_logger) _logger->logTcp(*this, TcpLogger::TCP_RCV_DUP_FASTXMIT);
+  if (_logger)
+      _logger->logTcp(*this, TcpLogger::TCP_RCV_DUP_FASTXMIT);
 }
 
 void
@@ -585,14 +567,14 @@ TcpSink::TcpSink()
 
 void 
 TcpSink::connect(TcpSrc& src, route_t& route)
-	{
+{
 	_src = &src;
 	_route = &route;
 	_cumulative_ack = 0;
 	_drops = 0;
 
 	//cout << "sink id: " << this->id << endl;
-	}
+}
 
 // Note: _cumulative_ack is the last byte we've ACKed.
 // seqno is the first byte of the new packet.

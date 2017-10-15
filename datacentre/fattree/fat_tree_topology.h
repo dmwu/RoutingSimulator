@@ -12,7 +12,7 @@
 #include "eventlist.h"
 #include <ostream>
 
-#define FAIL_RATE 0.01
+#define FAIL_RATE 0.0
 
 #define NK (K*K/2)
 #define NC (K*K/4)

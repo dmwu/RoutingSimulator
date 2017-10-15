@@ -5,9 +5,9 @@
 Clock::Clock(simtime_picosec period, EventList& eventlist)
 : EventSource(eventlist,"clock"), 
 	_period(period), _smallticks(0)
-	{
+{
 	eventlist.sourceIsPendingRel(*this, period);
-	}
+}
 
 void
 Clock::doNextEvent() {
@@ -19,6 +19,6 @@ Clock::doNextEvent() {
 	else {
 		//cout << '|';
 		_smallticks=0;
-		}
 	}
+}
 

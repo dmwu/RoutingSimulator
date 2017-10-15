@@ -21,7 +21,7 @@ class EventList {
 public:
     EventList();
 		void setEndtime(simtime_picosec endtime); // end simulation at endtime (rather than forever)
-    bool doNextEvent(); // returns true if it did anything, false if there's nothing to do
+    	bool doNextEvent(); // returns true if it did anything, false if there's nothing to do
 		void sourceIsPending(EventSource &src, simtime_picosec when);
 		void sourceIsPendingRel(EventSource &src, simtime_picosec timefromnow)
 			{ sourceIsPending(src, now()+timefromnow); }
@@ -29,8 +29,8 @@ public:
 private:
     simtime_picosec _endtime;
     simtime_picosec _lasteventtime;
-		typedef multimap <simtime_picosec, EventSource*> pendingsources_t;
-		pendingsources_t _pendingsources;
+	typedef multimap <simtime_picosec, EventSource*> pendingsources_t;
+	pendingsources_t _pendingsources;
 };
 
 #endif

@@ -51,7 +51,7 @@ public:
 	void logTraffic(Packet& pkt, Logged& location, TrafficLogger::TrafficEvent ev);
 protected:
 	TrafficLogger* _logger;
-	};
+};
 
 class PacketSink {
 public:

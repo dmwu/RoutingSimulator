@@ -3,6 +3,7 @@
 #include <strstream>
 #include <iostream>
 #include <string.h>
+#include <unistd.h>
 #include <list>
 #include <math.h>
 #include "network.h"
@@ -43,7 +44,7 @@ unsigned int subflow_count = 1;
 
 string ntoa(double n);
 string itoa(uint64_t n);
-bool check_null(route_t* rt);
+bool isRouteInvalid(route_t* rt);
 
 //#define SWITCH_BUFFER (SERVICE * RTT / 1000)
 #define USE_FIRST_FIT 0
@@ -102,31 +103,30 @@ int main(int argc, char **argv) {
 	    fail_id = atoi(argv[i+1]);
 	    i+=2;
       }
-
-      if (argc>i+1){
-        epsilon = -1;
-        if (!strcmp(argv[i], "UNCOUPLED"))
-          algo = UNCOUPLED;
-        else if (!strcmp(argv[i], "COUPLED_INC"))
-          algo = COUPLED_INC;
-        else if (!strcmp(argv[i], "FULLY_COUPLED"))
-          algo = FULLY_COUPLED;
-        else if (!strcmp(argv[i], "COUPLED_TCP"))
-          algo = COUPLED_TCP;
-        else if (!strcmp(argv[i], "COUPLED_SCALABLE_TCP"))
-          algo = COUPLED_SCALABLE_TCP;
-        else if (!strcmp(argv[i], "COUPLED_EPSILON")) {
-            algo = COUPLED_EPSILON;
-            if (argc > i+1)
-            epsilon = atof(argv[i+1]);
-            printf("Using epsilon %f\n", epsilon);
-        } else
-            exit_error(argv[0]);
-      }
-        
-        traf_file_name = argv[i];
-        srand(time(NULL));
-        logfile = new Logfile(filename.str(), eventlist);
+//
+//      if (argc>i+1){
+//        epsilon = -1;
+//        if (!strcmp(argv[i], "UNCOUPLED"))
+//          algo = UNCOUPLED;
+//        else if (!strcmp(argv[i], "COUPLED_INC"))
+//          algo = COUPLED_INC;
+//        else if (!strcmp(argv[i], "FULLY_COUPLED"))
+//          algo = FULLY_COUPLED;
+//        else if (!strcmp(argv[i], "COUPLED_TCP"))
+//          algo = COUPLED_TCP;
+//        else if (!strcmp(argv[i], "COUPLED_SCALABLE_TCP"))
+//          algo = COUPLED_SCALABLE_TCP;
+//        else if (!strcmp(argv[i], "COUPLED_EPSILON")) {
+//            algo = COUPLED_EPSILON;
+//            if (argc > i+1)
+//            epsilon = atof(argv[i+1]);
+//            printf("Using epsilon %f\n", epsilon);
+//        } else
+//            exit_error(argv[0]);
+//      }
+      traf_file_name = argv[i];
+      srand(time(NULL));
+      logfile = new Logfile(filename.str(), eventlist);
     }else{
         cout<<"wrong arguments!"<<endl;
         exit(1);
@@ -157,8 +157,6 @@ int main(int argc, char **argv) {
     TcpSrc* tcpSrc;
     TcpSink* tcpSnk;
 
-    //CbrSrc* cbrSrc;
-    //CbrSink* cbrSnk;
 
     route_t* routeout, *routein;
     double extrastarttime;
@@ -232,11 +230,24 @@ int main(int argc, char **argv) {
     
     string line;
     ifstream traf_file(file_name);
+    if(!traf_file.is_open()) {
+        cout << "cannot find trace file:"<<file_name<<"!" << endl;
+        char buffer[256];
+        char *answer = getcwd(buffer, sizeof(buffer));
+        string s_cwd;
+        if (answer)
+        {
+            s_cwd = answer;
+            cout<<"current directory:"<<s_cwd<<endl;
+        }
+    }
     getline(traf_file, line);
     int pos = line.find(" ");
     string str = line.substr(0, pos);
     int rack_n = atoi(str.c_str());
-    
+    int coflowNum = atoi(line.substr(pos+1).c_str());
+    cout<<"Num of tors:"<<rack_n<<" Num of Coflows:"<<coflowNum<<endl;
+
     vector<uint64_t*> flows_sent;
     vector<uint64_t*> flows_recv;
     vector<bool*> flows_finish;
@@ -249,9 +260,8 @@ int main(int argc, char **argv) {
         i = ++pos;
         pos = line.find(" ", pos);
         string str = line.substr(i, pos-i);
-        simtime_picosec time = (simtime_picosec)(atof(str.c_str())*1000000);
+        simtime_picosec arrivalTime = (simtime_picosec)(atof(str.c_str())*1000000);
 	    extrastarttime = atof(str.c_str());
-	//cout << "extrastarttime = " << extrastarttime << endl;
         i = ++pos;
         pos = line.find(" ", pos);
         str = line.substr(i, pos-i);
@@ -281,7 +291,7 @@ int main(int argc, char **argv) {
             string sub = str.substr(0, posi);
             int reducer = atoi(sub.c_str());
             sub = str.substr(posi+1, str.length());
-            uint64_t volume = (uint64_t)(atof(sub.c_str())/mappers.size()*1000000);
+            uint64_t volume_bytes = (uint64_t) (atof(sub.c_str())/mappers.size()*1000000);
 
             int dest = top->generate_server(reducer, rack_n);
 	        int dest_sw = dest/(K/2);
@@ -374,16 +384,16 @@ int main(int argc, char **argv) {
                                 choice = rand()%net_paths[src][dest]->size();
 #endif
 
-			                if (!check_null(net_paths[src][dest]->at(choice))) {
+			                if (isRouteInvalid(net_paths[src][dest]->at(choice))) {
                                 cout << "coflow_id: " << coflow_id << " sw: " << src_sw << " -> " << dest_sw
-                                     << " vol: " << volume/1000000 << " time: " << time/1000000 << endl;
+                                     << " vol: " << volume_bytes/1000000 << "MB, time: " << arrivalTime/1000000<< "(ms)" << endl;
                                 cout << "dropped flow " << connID << endl;
 				                continue;
 			                }
                             
                             subflows_chosen.push_back(choice);
                             
-                            tcpSrc = new TcpSrc(NULL, NULL, eventlist, flows_sent[connID], flows_recv[connID], volume, flows_finish[connID], time, connID);
+                            tcpSrc = new TcpSrc(NULL, NULL, eventlist, flows_sent[connID], flows_recv[connID], volume_bytes, flows_finish[connID], arrivalTime, connID);
                             tcpSnk = new TcpSink();
                             // yiting
                             tcpSnk->set_super_id(connID);
@@ -465,16 +475,12 @@ string itoa(uint64_t n) {
     return s.str();
 }
 
-bool check_null(route_t* rt){
-  int fail = 0;
-  for (unsigned int i=1;i<rt->size()-1;i+=2)
-    if (rt->at(i)==NULL){
-      fail = 1;
-      break;
-    }
-
-  if (fail){
-    return false;
+bool isRouteInvalid(route_t* rt){
+  bool fail = true;
+  for (unsigned int i=1;i<rt->size()-1;i+=2) {
+      if (rt->at(i) == NULL) {
+          return fail;
+      }
   }
-  return true;
+  return false;
 }
