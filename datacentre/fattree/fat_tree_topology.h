@@ -1,5 +1,6 @@
 #ifndef FAT_TREE
 #define FAT_TREE
+
 #include "main.h"
 #include "randomqueue.h"
 #include "pipe.h"
@@ -26,47 +27,60 @@
 #define MIN_POD_ID(pod_id) (pod_id*K/2)
 #define MAX_POD_ID(pod_id) ((pod_id+1)*K/2-1)
 
-class FatTreeTopology: public Topology{
- public:
-  Pipe * pipes_nc_nup[NC][NK];
-  Pipe * pipes_nup_nlp[NK][NK];
-  Pipe * pipes_nlp_ns[NK][NSRV];
-  RandomQueue * queues_nc_nup[NC][NK];
-  RandomQueue * queues_nup_nlp[NK][NK];
-  RandomQueue * queues_nlp_ns[NK][NSRV];
+class FatTreeTopology : public Topology {
+public:
+    Pipe *pipes_nc_nup[NC][NK];
+    Pipe *pipes_nup_nlp[NK][NK];
+    Pipe *pipes_nlp_ns[NK][NSRV];
+    RandomQueue *queues_nc_nup[NC][NK];
+    RandomQueue *queues_nup_nlp[NK][NK];
+    RandomQueue *queues_nlp_ns[NK][NSRV];
 
-  Pipe * pipes_nup_nc[NK][NC];
-  Pipe * pipes_nlp_nup[NK][NK];
-  Pipe * pipes_ns_nlp[NSRV][NK];
-  RandomQueue * queues_nup_nc[NK][NC];
-  RandomQueue * queues_nlp_nup[NK][NK];
-  RandomQueue * queues_ns_nlp[NSRV][NK];
+    Pipe *pipes_nup_nc[NK][NC];
+    Pipe *pipes_nlp_nup[NK][NK];
+    Pipe *pipes_ns_nlp[NSRV][NK];
+    RandomQueue *queues_nup_nc[NK][NC];
+    RandomQueue *queues_nlp_nup[NK][NK];
+    RandomQueue *queues_ns_nlp[NSRV][NK];
 
-  FirstFit * ff;
-  Logfile* logfile;
-  EventList* eventlist;
+    FirstFit *ff;
+    Logfile *logfile;
+    EventList *eventlist;
 
-  int* you_failed_suckas;
-  
-  FatTreeTopology(Logfile* log,EventList* ev,FirstFit* f, int fail_id);
+    int *you_failed_suckas;
 
-  void init_network();
-  virtual vector<route_t*>* get_paths(int src, int dest);
+    FatTreeTopology(Logfile *log, EventList *ev, FirstFit *f, int fail_id);
 
-  void count_queue(RandomQueue*);
-  void print_path(std::ofstream& paths,int src,route_t* route);
-  vector<int>* get_neighbours(int src) { return NULL;};
+    void init_network();
+
+    vector<route_t *> *get_paths_ecmp(int src, int dest);
+    vector<route_t *> *get_paths(int src, int dest){return NULL;};
+
+    route_t *get_path_2levelrt(int src, int dest);
+
+    void count_queue(RandomQueue *);
+
+    void print_path(std::ofstream &paths, int src, route_t *route);
+
+    vector<int> *get_neighbours(int src) { return NULL; };
+
     // yiting
     int generate_server(int rack, int rack_num);
-    int rand_host_sw (int sw);
+
+    int rand_host_sw(int sw);
+
     int node_to_link(int node1, int node2);
-    
- private:
-  map<RandomQueue*,int> _link_usage;
-  int find_lp_switch(RandomQueue* queue);
-  int find_up_switch(RandomQueue* queue);
-  int find_core_switch(RandomQueue* queue);
-  int find_destination(RandomQueue* queue);
+
+private:
+    map<RandomQueue *, int> _link_usage;
+
+    int find_lp_switch(RandomQueue *queue);
+
+    int find_up_switch(RandomQueue *queue);
+
+    int find_core_switch(RandomQueue *queue);
+
+    int find_destination(RandomQueue *queue);
 };
 
 #endif

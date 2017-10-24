@@ -14,7 +14,7 @@ Pipe::receivePacket(Packet& pkt)
     eventlist().sourceIsPendingRel(*this,_delay);
     //cout<<"+";
   }
-  _inflight.push_front(make_pair(eventlist().now()+_delay,&pkt));
+  _inflight.push_front(make_pair(eventlist().now()+_delay, &pkt));
   //  cout<<"RCV:"<<str()<<":"<<_inflight.size()<<endl;
 }
 

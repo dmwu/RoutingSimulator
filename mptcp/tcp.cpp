@@ -7,7 +7,7 @@
 ////////////////////////////////////////////////////////////////
 
 TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger,
-               EventList &eventlist)
+               EventList &eventlist, vector<double>* flowStats)
 : EventSource(eventlist,"tcp"),  _logger(logger), _flow(pktlogger)
 {
     _mss = TcpPacket::DEFAULTDATASIZE;
@@ -15,7 +15,7 @@ TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger,
     _sawtooth = 0;
     _rtt_avg = timeFromMs(0);
     _rtt_cum = timeFromMs(0);
-    _highest_sent = 0;
+    _highest_sent = 0; // [WDM]the last byte index of the highest packet (not sure)
     _packets_sent = 0;
     _app_limited = -1;
     _effcwnd = 0;
@@ -38,11 +38,12 @@ TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger,
     
     _flow_total_sent = &tmp_sent;
     _flow_total_received = &tmp_received;
-    _flow_volume = 0;
+    _flow_volume_bytes = 0;
     _flow_finish = &tmp_finish;
-    _flow_start_time = 0;
+    _flow_start_time_ms = 0;
     _super_id = -1;
-    
+    _flowStats = flowStats;
+
 #ifdef PACKET_SCATTER
     _crt_path = 0;
     DUPACK_TH = 3;
@@ -56,9 +57,16 @@ TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger,
     _RFC2988_RTO_timeout = timeInf;
 }
 
+TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger, EventList &eventlist)
+        : EventSource(eventlist,"tcp"),  _logger(logger), _flow(pktlogger){
+    TcpSrc(logger, pktlogger, eventlist, NULL);
+}
+
+
+
 TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger, 
 	       EventList &eventlist, uint64_t *total_sent, uint64_t *total_received,
-               uint64_t volume, bool *finish, simtime_picosec start_ms, int super_id)
+               uint64_t volume, bool *finish, double startTime_ms, int super_id, int coflowId, vector<double>* flowStats)
   : EventSource(eventlist,"tcp"),  _logger(logger), _flow(pktlogger)
 {
 	_mss = TcpPacket::DEFAULTDATASIZE;
@@ -81,14 +89,15 @@ TcpSrc::TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger,
 	_in_fast_recovery = false;
 	_mSrc = NULL;
 	_drops = 0;
-    
+    _flowStats = flowStats;
     // yiting
     _flow_total_sent = total_sent;
     _flow_total_received = total_received;
-    _flow_volume = volume;
+    _flow_volume_bytes = volume;
     _flow_finish = finish;
-    _flow_start_time = start_ms;
+    _flow_start_time_ms = startTime_ms;
     _super_id = super_id;
+    _coflowID = coflowId;
 
 #ifdef PACKET_SCATTER
 	_crt_path = 0;
@@ -145,16 +154,14 @@ void TcpSrc::replace_route(route_t* newroute){
   //  printf("Wiating for ack %d to delete\n",_last_packet_with_old_route);
 }
 
-void TcpSrc::connect(route_t& routeout, route_t& routeback, TcpSink& sink, simtime_picosec starttime) {
+void TcpSrc::connect(route_t& routeout, route_t& routeback, TcpSink& sink, simtime_picosec startTime_ps) {
   _route = &routeout;
 
   assert(_route);
   _sink = &sink;
   _flow.id = id; // identify the packet flow with the TCP source that generated it
   _sink->connect(*this, routeback);
-
-  //printf("Tcp %x msrc %x\n",this,_mSrc);
-  eventlist().sourceIsPending(*this,starttime);
+  eventlist().sourceIsPending(*this, startTime_ps);
 }
 
 #define ABS(X) ((X)>0?(X):-(X))
@@ -177,6 +184,18 @@ TcpSrc::receivePacket(Packet& pkt)
   }
 
   assert(seqno >= _last_acked);  // no dups or reordering allowed in this simple simulator
+
+    // yiting
+    *_flow_total_received += (seqno - _last_acked);
+    if (_flow_volume_bytes != 0 && *_flow_total_received >= _flow_volume_bytes && *_flow_finish == false) {
+        //cout << "id: " << _super_id << " recv: " << *_flow_total_received << endl;
+        *_flow_finish = true;
+        double comp_time_ms = (eventlist().now()/1e9) - _flow_start_time_ms;
+        double rate = (_flow_volume_bytes/1e6) / (comp_time_ms/1e3);
+        cout << "coflow:"<<_coflowID <<" subflow:" << _super_id << " compTime(ms):" << comp_time_ms<< " now(ms):" << (double)eventlist().now()/1e9 << " rate(MB/s):" << rate << endl;
+        _flowStats->push_back(comp_time_ms);
+        return;
+    }
 
   //compute rtt
   uint64_t m = eventlist().now()-ts;
@@ -212,6 +231,7 @@ TcpSrc::receivePacket(Packet& pkt)
 	    _old_route = NULL;
       }
     }
+
     _RFC2988_RTO_timeout = eventlist().now() + _rto;// RFC 2988 5.3
     _last_ping = eventlist().now();
     
@@ -222,19 +242,6 @@ TcpSrc::receivePacket(Packet& pkt)
 
     if (!_in_fast_recovery) { // best behaviour: proper ack of a new packet, when we were expecting it
       //clear timers
-      
-      // yiting
-      *_flow_total_received += (seqno - _last_acked);
-      if (_flow_volume != 0 && *_flow_total_received >= _flow_volume && *_flow_finish == false) {
-         //cout << "id: " << _super_id << " recv: " << *_flow_total_received << endl;
-         *_flow_finish = true;
-	    //uint64_t comp_time = eventlist().now()/1e9-_flow_start_time/1e6;
-          double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
-          double rate = _flow_volume * 8 * 1e3 / comp_time;
-          cout << "flow " << _super_id << " comp time: " << comp_time << " start: " << (double)_flow_start_time/1e6 << " end: " << (double)eventlist().now()/1e9 << " rate: " << rate << endl;
-         return;
-      }
- 
       _last_acked = seqno;
       _dupacks = 0;
       inflate_window();
@@ -246,23 +253,13 @@ TcpSrc::receivePacket(Packet& pkt)
     }
     // We're in fast recovery, i.e. one packet has been
     // dropped but we're pretending it's not serious
-    if (seqno >= _recoverq) { 
+    if (seqno >= _recoverq){
       // got ACKs for all the "recovery window": resume
       // normal service
       uint32_t flightsize = _highest_sent - seqno;
       _cwnd = min(_ssthresh, flightsize + _mss);
       _unacked = _cwnd;
       _effcwnd = _cwnd;
-      // yiting
-      *_flow_total_received += (seqno - _last_acked);
-        if (_flow_volume != 0 && *_flow_total_received >= _flow_volume && *_flow_finish == false) {
-            *_flow_finish = true;
-	        double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
-            double rate = _flow_volume * 8 * 1e3 / comp_time;
-            cout << "flow " << _super_id << " comp time: " << comp_time << " start: " << (double)_flow_start_time/1e6 << " end: " << (double)eventlist().now()/1e9 << " rate: " << rate << endl;
-            return;
-        }
-        
       _last_acked = seqno;
       _dupacks = 0;
       _in_fast_recovery = false;
@@ -275,18 +272,12 @@ TcpSrc::receivePacket(Packet& pkt)
     // This is dangerous. It means that several packets
     // got lost, not just the one that triggered FR.
     uint32_t new_data = seqno - _last_acked;
-    // yiting
-    *_flow_total_received += (seqno - _last_acked);
-    if (_flow_volume != 0 && *_flow_total_received >= _flow_volume && *_flow_finish == false) {
-            *_flow_finish = true;
-	        double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
-            double rate = _flow_volume * 8 * 1e3 / comp_time;
-            cout << "flow " << _super_id << " comp time: " << comp_time << " start: " << (double)_flow_start_time/1e6 << " end: " << (double)eventlist().now()/1e9 << " rate: " << rate << endl;
-          return;
-    }
-      
     _last_acked = seqno;
-    if (new_data < _cwnd) _cwnd -= new_data; else _cwnd=0;
+    if (new_data < _cwnd)
+        _cwnd -= new_data;
+    else
+        _cwnd=0;
+
     _cwnd += _mss;
     if (_logger) _logger->logTcp(*this, TcpLogger::TCP_RCV_FR);
     retransmit_packet();
@@ -377,11 +368,8 @@ TcpSrc::inflate_window() {
 	  uint32_t pkts = _cwnd/_mss;
 
 	  if (_mSrc==NULL){
-	    //int tt = (newly_acked * _mss) % _cwnd;
 	    _cwnd += (newly_acked * _mss) / _cwnd;  //XXX beware large windows, when this increase gets to be very small
 
-	    //if (rand()%_cwnd < tt)
-	    //_cwnd++;
 	  }
 	  else 
 	    _cwnd = _mSrc->inflate_window(_cwnd,newly_acked,_mss);
@@ -400,37 +388,18 @@ TcpSrc::send_packets() {
     //cout << "id: " << _super_id << " volume: " << _flow_volume << " sent: " << *_flow_total_sent << endl;
     
   int c = _cwnd;
-
   if (_app_limited>=0 && _rtt>0){
     uint64_t d = (uint64_t)_app_limited * _rtt/1000000000;
     if (c>d){
       c = d;
     }
-    //if (c<1000)
-    //c = 1000;
-
-    if (c==0){
-      //      _RFC2988_RTO_timeout = timeInf;
-    }
-
-    //rtt in ms
-    //printf("%d\n",c);
   }
 
   while (_last_acked + c >= _highest_sent + _mss) {
-      if (_flow_volume != 0 && *_flow_total_sent >= _flow_volume) {
-          /*if (*_flow_finish == false) {
-              *_flow_finish = true;
-              //uint64_t comp_time = eventlist().now()/1e9-_flow_start_time/1e6;
-	      double comp_time = (double)eventlist().now()/1e9-(double)_flow_start_time/1e6;
-              double rate = _flow_volume * 8 * 1e3 / comp_time;
-              
-              cout << "flow " << _super_id << " comp time: " << comp_time << " start: " << (double)_flow_start_time/1e6 << " end: " << (double)eventlist().now()/1e9 << " rate: " << rate << endl;
-              //cout << "flow " << _super_id << " comp time: " << comp_time << " throughput: " << rate << endl;
-          }*/
+      if (_flow_volume_bytes != 0 && *_flow_total_sent >= _flow_volume_bytes) {
           return;
       }
-      
+
 #ifdef PACKET_SCATTER
     TcpPacket* p = TcpPacket::newpkt(_flow, *(_paths->at(_crt_path)), _highest_sent+1, _mss);
     _crt_path = (_crt_path + 1) % _paths->size();
@@ -439,12 +408,12 @@ TcpSrc::send_packets() {
 #endif
     p->flow().logTraffic(*p,*this,TrafficLogger::PKT_CREATESEND);
     p->set_ts(eventlist().now());
-    
+
     _highest_sent += _mss;  //XX beware wrapping
     _packets_sent += _mss;
     // yiting
     *_flow_total_sent += _mss;
-      
+
     p->sendOn();
 
     if(_RFC2988_RTO_timeout == timeInf) {// RFC2988 5.1
@@ -627,7 +596,7 @@ TcpSink::receivePacket(Packet& pkt) {
 void 
 TcpSink::send_ack(simtime_picosec ts) {
 	TcpAck *ack = TcpAck::newpkt(_src->_flow, *_route, 0, _cumulative_ack);
-	ack->flow().logTraffic(*ack,*this,TrafficLogger::PKT_CREATESEND);
+	ack->flow().logTraffic(*ack, *this, TrafficLogger::PKT_CREATESEND);
 	ack->set_ts(ts);
 	ack->sendOn();
 }
@@ -640,23 +609,23 @@ TcpSink::send_ack(simtime_picosec ts) {
 TcpRtxTimerScanner::TcpRtxTimerScanner(simtime_picosec scanPeriod, EventList& eventlist)
 : EventSource(eventlist,"RtxScanner"), 
 	_scanPeriod(scanPeriod)
-	{
+{
 	eventlist.sourceIsPendingRel(*this, _scanPeriod);
-	}
+}
 
 void 
 TcpRtxTimerScanner::registerTcp(TcpSrc &tcpsrc)
-	{
+{
 	_tcps.push_back(&tcpsrc);
-	}
+}
 
 void
 TcpRtxTimerScanner::doNextEvent() 
-	{
+{
 	simtime_picosec now = eventlist().now();
 	tcps_t::iterator i;
 	for (i = _tcps.begin(); i!=_tcps.end(); i++) {
 	  (*i)->rtx_timer_hook(now,_scanPeriod);
 		}
 	eventlist().sourceIsPendingRel(*this, _scanPeriod);
-	}
+}

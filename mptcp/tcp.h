@@ -24,8 +24,9 @@ class TcpSrc : public PacketSink, public EventSource {
 friend class TcpSink;
 public:
     TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger, EventList &eventlist);
-	TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger, EventList &eventlist, uint64_t *total_sent, uint64_t *total_received, uint64_t volume, bool *finish, simtime_picosec start, int super_id);
-	virtual void connect(route_t& routeout, route_t& routeback, TcpSink& sink, simtime_picosec startTime);
+	TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger, EventList &eventList, vector<double>*flowStatistics);
+	TcpSrc(TcpLogger* logger, TrafficLogger* pktlogger, EventList &eventlist, uint64_t *total_sent, uint64_t *total_received, uint64_t volume, bool *finish, double start_ms, int super_id, int coflowId,  vector<double>*flowStatistics);
+	virtual void connect(route_t& routeout, route_t& routeback, TcpSink& sink, simtime_picosec startTime_ps);
 	void startflow();
 	inline void joinMultipathConnection(MultipathTcpSrc* multipathSrc){
 	  _mSrc = multipathSrc;
@@ -50,10 +51,11 @@ public:
     // yiting
     uint64_t *_flow_total_sent;
     uint64_t *_flow_total_received;
-    uint64_t _flow_volume;
+    uint64_t _flow_volume_bytes;
     bool *_flow_finish;
-    simtime_picosec _flow_start_time;
+	double _flow_start_time_ms;
     int _super_id;
+	int _coflowID;
     
 #ifdef PACKET_SCATTER
 	uint16_t DUPACK_TH;
@@ -85,6 +87,8 @@ public:
 
 	route_t* _route;
 	simtime_picosec _last_ping;
+
+	vector<double>* _flowStats;
 #ifdef PACKET_SCATTER
 	vector<route_t*>* _paths;
 
@@ -93,6 +97,7 @@ public:
 private:
 	route_t* _old_route;
 	uint64_t _last_packet_with_old_route;
+
 
 	// Housekeeping
 	TcpLogger* _logger;

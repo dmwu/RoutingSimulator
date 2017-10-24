@@ -3,8 +3,8 @@
 include_directories(${PROJECT_SOURCE_DIR}/mptcp)
 file(GLOB HEADERS *.h)
 add_executable (fattree main.cpp firstfit.cpp fat_tree_topology.cpp
-        subflow_control.cpp connection_matrix.cpp shortflows.cpp star_topology.cpp
-        Graph.cpp YenTopKShortestPathsAlg.cpp DijkstraShortestPathAlg.cpp ${HEADERS})
+        subflow_control.cpp connection_matrix.cpp shortflows.cpp
+        Graph.cpp ${HEADERS})
 
 # Link the executable to the Hello library. Since the Hello library has
 # public include directories we will use those link directories when building
