@@ -1,4 +1,5 @@
 #include "queue.h"
+#include <iostream>
 #include <math.h>
 
 Queue::Queue(linkspeed_bps bitrate, mem_b maxsize, EventList& eventlist, QueueLogger* logger)
@@ -6,7 +7,7 @@ Queue::Queue(linkspeed_bps bitrate, mem_b maxsize, EventList& eventlist, QueueLo
 	_maxsize(maxsize), _logger(logger), _bitrate(bitrate)
 	{
 	_queuesize = 0;
-  _ps_per_byte = (simtime_picosec)((pow(10.0,12.0) * 8) / _bitrate);
+  	_ps_per_byte = (simtime_picosec)((pow(10.0,12.0) * 8) / _bitrate);
 	}
 
 
@@ -18,10 +19,15 @@ void Queue::beginService()
 
 void Queue::completeService()
 {
-	assert(!_enqueued.empty());
+	if(_enqueued.empty()){
+		std::cout<<"empty queue:"<<this->str()<<std::endl;
+		exit(1);
+	}
 	Packet* pkt = _enqueued.back();
 	_enqueued.pop_back();
+
 	_queuesize -= pkt->size();
+
 	pkt->flow().logTraffic(*pkt,*this,TrafficLogger::PKT_DEPART);
 	if (_logger)
 		_logger->logQueue(*this, QueueLogger::PKT_SERVICE, *pkt);
@@ -45,10 +51,12 @@ void Queue::receivePacket(Packet& pkt)
 		pkt.free();
 		return;
 	}
+
 	pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_ARRIVE);
 	bool queueWasEmpty = _enqueued.empty();
 	_enqueued.push_front(&pkt);
 	_queuesize += pkt.size();
+
 	if (_logger)
 		_logger->logQueue(*this, QueueLogger::PKT_ENQUEUE, pkt);
 	if (queueWasEmpty) {

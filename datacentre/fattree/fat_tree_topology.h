@@ -32,9 +32,9 @@ public:
     Pipe *pipes_nc_nup[NC][NK];
     Pipe *pipes_nup_nlp[NK][NK];
     Pipe *pipes_nlp_ns[NK][NSRV];
-    RandomQueue *queues_nc_nup[NC][NK];
+    RandomQueue *queues_nc_nup[NC][NK];//[WDM] queue is on the second end of the link
     RandomQueue *queues_nup_nlp[NK][NK];
-    RandomQueue *queues_nlp_ns[NK][NSRV];
+   // RandomQueue *queues_nlp_ns[NK][NSRV]; //handle host queues separately
 
     Pipe *pipes_nup_nc[NK][NC];
     Pipe *pipes_nlp_nup[NK][NK];
@@ -42,6 +42,8 @@ public:
     RandomQueue *queues_nup_nc[NK][NC];
     RandomQueue *queues_nlp_nup[NK][NK];
     RandomQueue *queues_ns_nlp[NSRV][NK];
+    RandomQueue *HostRecvQueues[NSRV];
+    RandomQueue *HostTXQueues[NSRV];
 
     FirstFit *ff;
     Logfile *logfile;

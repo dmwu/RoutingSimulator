@@ -67,7 +67,7 @@ void exit_error(char *progr) {
 }
 
 void print_path(std::ofstream &paths, route_t *rt) {
-    for (unsigned int i = 1; i < rt->size() - 1; i += 2) {
+    for (unsigned int i = 0; i < rt->size(); i += 2) {
         RandomQueue *q = (RandomQueue *) rt->at(i);
         if (q != NULL)
             paths << q->str() << " ";
@@ -108,27 +108,6 @@ int main(int argc, char **argv) {
             fail_id = atoi(argv[i + 1]);
             i += 2;
         }
-//
-//      if (argc>i+1){
-//        epsilon = -1;
-//        if (!strcmp(argv[i], "UNCOUPLED"))
-//          algo = UNCOUPLED;
-//        else if (!strcmp(argv[i], "COUPLED_INC"))
-//          algo = COUPLED_INC;
-//        else if (!strcmp(argv[i], "FULLY_COUPLED"))
-//          algo = FULLY_COUPLED;
-//        else if (!strcmp(argv[i], "COUPLED_TCP"))
-//          algo = COUPLED_TCP;
-//        else if (!strcmp(argv[i], "COUPLED_SCALABLE_TCP"))
-//          algo = COUPLED_SCALABLE_TCP;
-//        else if (!strcmp(argv[i], "COUPLED_EPSILON")) {
-//            algo = COUPLED_EPSILON;
-//            if (argc > i+1)
-//            epsilon = atof(argv[i+1]);
-//            printf("Using epsilon %f\n", epsilon);
-//        } else
-//            exit_error(argv[0]);
-//      }
         traf_file_name = argv[i];
         srand(time(NULL));
         logfile = new Logfile(filename.str(), eventlist);
@@ -139,20 +118,12 @@ int main(int argc, char **argv) {
 
 #if PRINT_PATHS
     filename << ".paths";
-    std::ofstream paths(filename.str().c_str());
-    if (!paths) {
+    std::ofstream pathFile(filename.str().c_str());
+    if (!pathFile) {
         cout << "Can't open for writing paths file!" << endl;
         exit(1);
     }
 #endif
-
-
-    logfile->setStartTime(timeFromSec(0));
-
-    //[WDM] REMOVE sinkLogger may save a lot of time
-
-    //SinkLoggerSampling sinkLogger = SinkLoggerSampling(timeFromMs(10), eventlist);
-    //logfile->addLogger(sinkLogger);
 
 
     TcpSrc *tcpSrc;
@@ -181,7 +152,7 @@ int main(int argc, char **argv) {
     net_paths = new vector<route_t *> **[NHOST];
 
     int *is_dest = new int[NHOST];
-
+    double simStartingTime_ms = -1;
     for (int i = 0; i < NHOST; i++) {
         is_dest[i] = 0;
         net_paths[i] = new vector<route_t *> *[NHOST];
@@ -232,6 +203,11 @@ int main(int argc, char **argv) {
         pos = line.find(" ", pos);
         string str = line.substr(i, pos - i);
         double arrivalTime_ms = atof(str.c_str());
+
+        if(arrivalTime_ms < simStartingTime_ms || simStartingTime_ms < 0){
+            simStartingTime_ms = arrivalTime_ms;
+        }
+
         i = ++pos;
         pos = line.find(" ", pos);
         str = line.substr(i, pos - i);
@@ -337,14 +313,27 @@ int main(int argc, char **argv) {
 
 
 #if PRINT_PATHS
-                paths << "Route from " << ntoa(src) << " to " << ntoa(dest) << " -> ";
-                print_path(paths, path);
+                pathFile << "Coflow:subflow "<<coflow_id<<":"<<subFlowID;
+                pathFile << " Route from " << ntoa(src) << " to " << ntoa(dest) << " -> ";
+                print_path(pathFile, path);
 #endif
 
                 routeout = new route_t(*path);
                 routeout->push_back(tcpSnk);
 
                 routein = new route_t();
+                RandomQueue* destTxQueue = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
+                                                           eventlist, NULL, memFromPkt(RANDOM_BUFFER));
+                destTxQueue->setName("DST_TX_"+ntoa(src)+"-"+ntoa(dest));
+                routein->push_back(destTxQueue);
+                for(int i = path->size()-2; i >=1; i--) {
+                    routein->push_back(path->at(i));
+                }
+                RandomQueue* srcRxQueue = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
+                                                          eventlist, NULL, memFromPkt(RANDOM_BUFFER));
+                srcRxQueue->setName("SRC_RX"+ntoa(src)+"-"+ntoa(dest));
+                routein->push_back(srcRxQueue);
+
                 routein->push_back(tcpSrc);
 
                 tcpSrc->connect(*routeout, *routein, *tcpSnk, timeFromMs(arrivalTime_ms));
@@ -364,6 +353,7 @@ int main(int argc, char **argv) {
 
     cout << "Total Number of TCP flows:" << ++connID << endl;
     double rtt = timeAsSec(timeFromUs(RTT));
+    tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     // GO!
     while (eventlist.doNextEvent()) {
 

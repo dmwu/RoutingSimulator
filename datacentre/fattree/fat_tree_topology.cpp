@@ -57,6 +57,17 @@ FatTreeTopology::FatTreeTopology(Logfile *lg, EventList *ev, FirstFit *fit, int 
 void FatTreeTopology::init_network() {
     QueueLoggerSampling *queueLogger;
 
+    for(int i = 0; i < NSRV; i++){
+        HostTXQueues[i] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
+                                          *eventlist, NULL, memFromPkt(RANDOM_BUFFER));
+        HostTXQueues[i]->setName("TxQueue:"+ntoa(i));
+
+        HostRecvQueues[i] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
+                                          *eventlist, NULL, memFromPkt(RANDOM_BUFFER));
+        HostRecvQueues[i]->setName("RxQueue:"+ntoa(i));
+
+    }
+
     for (int j = 0; j < NC; j++)
         for (int k = 0; k < NK; k++) {
             queues_nc_nup[j][k] = NULL;
@@ -75,7 +86,6 @@ void FatTreeTopology::init_network() {
 
     for (int j = 0; j < NK; j++)
         for (int k = 0; k < NSRV; k++) {
-            queues_nlp_ns[j][k] = NULL;
             pipes_nlp_ns[j][k] = NULL;
             queues_ns_nlp[k][j] = NULL;
             pipes_ns_nlp[k][j] = NULL;
@@ -91,36 +101,23 @@ void FatTreeTopology::init_network() {
             if (you_failed_suckas[k] == 1) {
                 continue;
             }
-            // Downlink
-            queueLogger = new QueueLoggerSampling(timeFromMs(1000), *eventlist);
-            //queueLogger = NULL;
-            logfile->addLogger(*queueLogger);
-
-            queues_nlp_ns[j][k] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER),
-                                                  *eventlist, queueLogger, memFromPkt(RANDOM_BUFFER));
-            queues_nlp_ns[j][k]->setName("LS_" + ntoa(j) + "-" + "DST_" + ntoa(k));
-            logfile->writeName(*(queues_nlp_ns[j][k]));
+            //[WDM]handle host queues separately
+            //queues_nlp_ns[j][k] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
+                                                  //*eventlist, queueLogger, memFromPkt(RANDOM_BUFFER));
+            //queues_nlp_ns[j][k]->setName("RX_DST_" + ntoa(k));
 
             pipes_nlp_ns[j][k] = new Pipe(timeFromUs(RTT), *eventlist);
             pipes_nlp_ns[j][k]->setName("Pipe-nt-ns-" + ntoa(j) + "-" + ntoa(k));
-            logfile->writeName(*(pipes_nlp_ns[j][k]));
+
 
             // Uplink
-            queueLogger = new QueueLoggerSampling(timeFromMs(1000), *eventlist);
-            logfile->addLogger(*queueLogger);
             queues_ns_nlp[k][j] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER),
                                                   *eventlist, queueLogger, memFromPkt(RANDOM_BUFFER));
             queues_ns_nlp[k][j]->setName("SRC_" + ntoa(k) + "-" + "LS_" + ntoa(j));
-            logfile->writeName(*(queues_ns_nlp[k][j]));
 
             pipes_ns_nlp[k][j] = new Pipe(timeFromUs(RTT), *eventlist);
             pipes_ns_nlp[k][j]->setName("Pipe-ns-nt-" + ntoa(k) + "-" + ntoa(j));
-            logfile->writeName(*(pipes_ns_nlp[k][j]));
 
-            if (ff) {
-                ff->add_queue(queues_nlp_ns[j][k]);
-                ff->add_queue(queues_ns_nlp[k][j]);
-            }
         }
     }
 
@@ -136,30 +133,22 @@ void FatTreeTopology::init_network() {
                 continue;
             }
 
-            queueLogger = new QueueLoggerSampling(timeFromMs(1000), *eventlist);
-            logfile->addLogger(*queueLogger);
             queues_nup_nlp[k][j] = new RandomQueue(speedFromPktps(HOST_NIC / CORE_TO_HOST),
                                                    memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER), *eventlist, queueLogger,
                                                    memFromPkt(RANDOM_BUFFER));
             queues_nup_nlp[k][j]->setName("US_" + ntoa(k) + "-" + "LS_" + ntoa(j));
-            logfile->writeName(*(queues_nup_nlp[k][j]));
 
             pipes_nup_nlp[k][j] = new Pipe(timeFromUs(RTT), *eventlist);
             pipes_nup_nlp[k][j]->setName("Pipe-na-nt-" + ntoa(k) + "-" + ntoa(j));
-            logfile->writeName(*(pipes_nup_nlp[k][j]));
 
             // Uplink
-            queueLogger = new QueueLoggerSampling(timeFromMs(1000), *eventlist);
-            logfile->addLogger(*queueLogger);
             queues_nlp_nup[j][k] = new RandomQueue(speedFromPktps(HOST_NIC / CORE_TO_HOST),
                                                    memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER), *eventlist, queueLogger,
                                                    memFromPkt(RANDOM_BUFFER));
             queues_nlp_nup[j][k]->setName("LS_" + ntoa(j) + "-" + "US_" + ntoa(k));
-            logfile->writeName(*(queues_nlp_nup[j][k]));
 
             pipes_nlp_nup[j][k] = new Pipe(timeFromUs(RTT), *eventlist);
             pipes_nlp_nup[j][k]->setName("Pipe-nt-na-" + ntoa(j) + "-" + ntoa(k));
-            logfile->writeName(*(pipes_nlp_nup[j][k]));
 
             if (ff) {
                 ff->add_queue(queues_nlp_nup[j][k]);
@@ -181,23 +170,16 @@ void FatTreeTopology::init_network() {
             }
 
             // Downlink
-            queueLogger = new QueueLoggerSampling(timeFromMs(1000), *eventlist);
-            logfile->addLogger(*queueLogger);
 
             queues_nup_nc[j][k] = new RandomQueue(speedFromPktps(HOST_NIC / CORE_TO_HOST),
                                                   memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER), *eventlist, queueLogger,
                                                   memFromPkt(RANDOM_BUFFER));
             queues_nup_nc[j][k]->setName("US_" + ntoa(j) + "-" + "CS_" + ntoa(k));
-            logfile->writeName(*(queues_nup_nc[j][k]));
 
             pipes_nup_nc[j][k] = new Pipe(timeFromUs(RTT), *eventlist);
             pipes_nup_nc[j][k]->setName("Pipe-nup-nc-" + ntoa(j) + "-" + ntoa(k));
-            logfile->writeName(*(pipes_nup_nc[j][k]));
 
             // Uplink
-
-            queueLogger = new QueueLoggerSampling(timeFromMs(1000), *eventlist);
-            logfile->addLogger(*queueLogger);
 
             queues_nc_nup[k][j] = new RandomQueue(speedFromPktps(HOST_NIC / CORE_TO_HOST),
                                                   memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER), *eventlist, queueLogger,
@@ -205,11 +187,8 @@ void FatTreeTopology::init_network() {
             queues_nc_nup[k][j]->setName("CS_" + ntoa(k) + "-" + "US_" + ntoa(j));
 
 
-            logfile->writeName(*(queues_nc_nup[k][j]));
-
             pipes_nc_nup[k][j] = new Pipe(timeFromUs(RTT), *eventlist);
             pipes_nc_nup[k][j]->setName("Pipe-nc-nup-" + ntoa(k) + "-" + ntoa(j));
-            logfile->writeName(*(pipes_nc_nup[k][j]));
 
             if (ff) {
                 ff->add_queue(queues_nup_nc[j][k]);
@@ -217,13 +196,6 @@ void FatTreeTopology::init_network() {
             }
         }
     }
-
-    /*    for (int i = 0;i<NK;i++){
-      for (int j = 0;j<NC;j++){
-	printf("%p/%p ",queues_nup_nc[i][j], queues_nc_nup[j][i]);
-      }
-      printf("\n");
-      }*/
 }
 
 bool checkValid(route_t *rt) {
@@ -240,21 +212,16 @@ vector<route_t *> *FatTreeTopology::get_paths_ecmp(int src, int dest) {
     route_t *routeout;
 
     if (HOST_POD_SWITCH(src) == HOST_POD_SWITCH(dest)) {
-        Queue *pqueue = new Queue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER), *eventlist, NULL);
-        pqueue->setName("PQueue_" + ntoa(src) + "_" + ntoa(dest));
-        //logfile->writeName(*pqueue);
-
         routeout = new route_t();
-        routeout->push_back(pqueue);
+        routeout->push_back(HostTXQueues[src]);
 
-        //cout << "src: " << src << " switch: " << HOST_POD_SWITCH(src) << endl;
-        //cout << "dest: " << dest << " switch: " << HOST_POD_SWITCH(dest) << endl;
-
-        routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
         routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
 
-        routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+        routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
+
         routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+
+        routeout->push_back(HostRecvQueues[dest]);
 
         paths->push_back(routeout);
         return paths;
@@ -267,32 +234,28 @@ vector<route_t *> *FatTreeTopology::get_paths_ecmp(int src, int dest) {
         for (int upper = MIN_POD_ID(pod); upper <= MAX_POD_ID(pod); upper++) {
             int link_id1 = node_to_link(HOST_POD_SWITCH(src), upper + NK);
             int link_id2 = node_to_link(HOST_POD_SWITCH(dest), upper + NK);
-            if (REROUTE == 1 && (you_failed_suckas[link_id1] == 1 || you_failed_suckas[link_id2] == 1)) {
-                continue;
-            }
 
             //upper is nup
-            Queue *pqueue = new Queue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER), *eventlist, NULL);
-            pqueue->setName("PQueue_" + ntoa(src) + "_" + ntoa(dest));
-            //logfile->writeName(*pqueue);
 
             routeout = new route_t();
-            routeout->push_back(pqueue);
+            routeout->push_back(HostTXQueues[src]);
 
-            //cout << "src: " << src << " switch: " << HOST_POD_SWITCH(src) << endl;
-            //cout << "dest: " << dest << " switch: " << HOST_POD_SWITCH(dest) << endl;
 
-            routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
             routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
 
-            routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][upper]);
+            routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
+
             routeout->push_back(pipes_nlp_nup[HOST_POD_SWITCH(src)][upper]);
 
-            routeout->push_back(queues_nup_nlp[upper][HOST_POD_SWITCH(dest)]);
+            routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][upper]);
+
             routeout->push_back(pipes_nup_nlp[upper][HOST_POD_SWITCH(dest)]);
 
-            routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+            routeout->push_back(queues_nup_nlp[upper][HOST_POD_SWITCH(dest)]);
+
             routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+
+            routeout->push_back(HostRecvQueues[dest]);
 
             paths->push_back(routeout);
 
@@ -303,63 +266,43 @@ vector<route_t *> *FatTreeTopology::get_paths_ecmp(int src, int dest) {
     } else {
         int pod = HOST_POD(src);
         for (int upper = MIN_POD_ID(pod); upper <= MAX_POD_ID(pod); upper++) {
-            int link_index = node_to_link(HOST_POD_SWITCH(src), upper + NK);
-            if (you_failed_suckas[link_index] == 1 && REROUTE == 1) {
-                //cout << "link_id = " << link_id << endl;
-                continue;
-            }
 
             for (int core = (upper % (K / 2)) * K / 2; core < ((upper % (K / 2)) + 1) * K / 2; core++) {
-                //cout << "upper = " << upper << " core = " << core << endl;
-                int link_id = node_to_link(upper + NK, core + 2 * NK);
-                if (you_failed_suckas[link_id] == 1 && REROUTE == 1) {
-                    //cout << "linke_id = " << link_id << endl;
-                    continue;
-                }
 
                 //upper is nup
-                Queue *pqueue = new Queue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER), *eventlist, NULL);
-                pqueue->setName("PQueue_" + ntoa(src) + "_" + ntoa(dest));
-                //logfile->writeName(*pqueue);
 
                 routeout = new route_t();
-                routeout->push_back(pqueue);
+                routeout->push_back(HostTXQueues[src]);
 
-                //cout << "src: " << src << " switch: " << HOST_POD_SWITCH(src) << endl;
-                //cout << "dest: " << dest << " switch: " << HOST_POD_SWITCH(dest) << endl;
-
-                routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
                 routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
 
-                routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][upper]);
+                routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
+
                 routeout->push_back(pipes_nlp_nup[HOST_POD_SWITCH(src)][upper]);
 
-                routeout->push_back(queues_nup_nc[upper][core]);
+                routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][upper]);
+
                 routeout->push_back(pipes_nup_nc[upper][core]);
+
+                routeout->push_back(queues_nup_nc[upper][core]);
 
                 //now take the only link down to the destination server!
 
                 int upper2 = HOST_POD(dest) * K / 2 + 2 * core / K;
-                //printf("K %d HOST_POD(%d) %d core %d upper2 %d\n",K,dest,HOST_POD(dest),core, upper2);
-                int link_id1 = node_to_link(HOST_POD_SWITCH(dest), upper2 + NK);
-                int link_id2 = node_to_link(upper2 + NK, core + 2 * NK);
-                if (REROUTE == 1 && (you_failed_suckas[link_id1] == 1 || you_failed_suckas[link_id2] == 1)) {
-                    //cout << "link_id = " << link_id << endl;
-                    continue;
-                }
 
-                routeout->push_back(queues_nc_nup[core][upper2]);
                 routeout->push_back(pipes_nc_nup[core][upper2]);
 
-                routeout->push_back(queues_nup_nlp[upper2][HOST_POD_SWITCH(dest)]);
+                routeout->push_back(queues_nc_nup[core][upper2]);
+
                 routeout->push_back(pipes_nup_nlp[upper2][HOST_POD_SWITCH(dest)]);
 
-                routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+                routeout->push_back(queues_nup_nlp[upper2][HOST_POD_SWITCH(dest)]);
+
                 routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
 
+                routeout->push_back(HostRecvQueues[dest]);
+
                 paths->push_back(routeout);
-                //if (!check_non_null(routeout))
-                //return NULL;
             }
         }
         return paths;
@@ -368,19 +311,17 @@ vector<route_t *> *FatTreeTopology::get_paths_ecmp(int src, int dest) {
 
 //Implemented by WDM
 route_t* FatTreeTopology::get_path_2levelrt(int src, int dest) {
-    route_t* routeout = new route_t();
 
-    Queue *pqueue = new Queue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER), *eventlist, NULL);
-    pqueue->setName("PQueue_" + ntoa(src) + "_" + ntoa(dest));
-    routeout->push_back(pqueue);
+    route_t* routeout = new route_t();
+    RandomQueue *txqueue = HostTXQueues[src];
+    routeout->push_back(txqueue);
 
     //under the same TOR
     if (HOST_POD_SWITCH(src) == HOST_POD_SWITCH(dest)) {
 
-        routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
         routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
 
-        routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+        routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
         routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
 
     //under the same Pod
@@ -390,17 +331,21 @@ route_t* FatTreeTopology::get_path_2levelrt(int src, int dest) {
         int destHostID = (dest % (K*K/4)) % (K/2);
         int aggSwitchID = MIN_POD_ID(pod) + srcHostID;
 
-        routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
         routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
 
-        routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][aggSwitchID]);
+        routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
+
         routeout->push_back(pipes_nlp_nup[HOST_POD_SWITCH(src)][aggSwitchID]);
 
-        routeout->push_back(queues_nup_nlp[aggSwitchID][HOST_POD_SWITCH(dest)]);
+
+        routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][aggSwitchID]);
+
         routeout->push_back(pipes_nup_nlp[aggSwitchID][HOST_POD_SWITCH(dest)]);
 
-        routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+        routeout->push_back(queues_nup_nlp[aggSwitchID][HOST_POD_SWITCH(dest)]);
+
         routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+
 
     }else{
 
@@ -412,25 +357,31 @@ route_t* FatTreeTopology::get_path_2levelrt(int src, int dest) {
 
         int aggSwitchID2 = HOST_POD(dest) * K / 2 + 2 * core/ K;
 
-        routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
         routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
 
-        routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][aggSwitchID1]);
+        routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
+
         routeout->push_back(pipes_nlp_nup[HOST_POD_SWITCH(src)][aggSwitchID1]);
 
-        routeout->push_back(queues_nup_nc[aggSwitchID1][core]);
+        routeout->push_back(queues_nlp_nup[HOST_POD_SWITCH(src)][aggSwitchID1]);
+
         routeout->push_back(pipes_nup_nc[aggSwitchID1][core]);
 
-        routeout->push_back(queues_nc_nup[core][aggSwitchID2]);
+        routeout->push_back(queues_nup_nc[aggSwitchID1][core]);
+
         routeout->push_back(pipes_nc_nup[core][aggSwitchID2]);
 
-        routeout->push_back(queues_nup_nlp[aggSwitchID2][HOST_POD_SWITCH(dest)]);
+        routeout->push_back(queues_nc_nup[core][aggSwitchID2]);
+
         routeout->push_back(pipes_nup_nlp[aggSwitchID2][HOST_POD_SWITCH(dest)]);
 
-        routeout->push_back(queues_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
+        routeout->push_back(queues_nup_nlp[aggSwitchID2][HOST_POD_SWITCH(dest)]);
+
         routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
 
     }
+    RandomQueue* rxQueue = HostRecvQueues[dest];
+    routeout->push_back(rxQueue);
     return routeout;
 }
 
@@ -489,11 +440,9 @@ int FatTreeTopology::find_core_switch(RandomQueue *queue) {
 }
 
 int FatTreeTopology::find_destination(RandomQueue *queue) {
-    //first check nlp_ns
-    for (int i = 0; i < NK; i++)
-        for (int j = 0; j < NSRV; j++)
-            if (queues_nlp_ns[i][j] == queue)
-                return j;
+    for (int j = 0; j < NSRV; j++)
+        if (HostTXQueues[j] == queue || HostRecvQueues[j] == queue)
+            return j;
 
     return -1;
 }
@@ -534,7 +483,6 @@ int FatTreeTopology::generate_server(int rack, int rack_num) {
 
 int FatTreeTopology::rand_host_sw(int sw) {
     int hostPerEdge = K / 2;
-    //srand(time(NULL));
     int server_sw = rand() % hostPerEdge;
     int server = sw * hostPerEdge + server_sw;
     return server;

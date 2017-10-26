@@ -152,6 +152,7 @@ private:
 class TcpRtxTimerScanner : public EventSource {
 public:
     TcpRtxTimerScanner(simtime_picosec scanPeriod, EventList& eventlist);
+	void StartFrom(simtime_picosec startFrom);
     void doNextEvent();
     void registerTcp(TcpSrc &tcpsrc);
 private:

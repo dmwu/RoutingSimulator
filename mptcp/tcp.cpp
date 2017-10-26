@@ -172,7 +172,6 @@ TcpSrc::receivePacket(Packet& pkt)
   simtime_picosec ts;
   TcpAck *p = (TcpAck*)(&pkt);
   TcpAck::seq_t seqno = p->ackno();
-  //cout << "id: " << _super_id << " ack = " << p->ackno() << endl;
   pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_RCVDESTROY);
   
   ts = p->ts();
@@ -607,10 +606,12 @@ TcpSink::send_ack(simtime_picosec ts) {
 ////////////////////////////////////////////////////////////////
 
 TcpRtxTimerScanner::TcpRtxTimerScanner(simtime_picosec scanPeriod, EventList& eventlist)
-: EventSource(eventlist,"RtxScanner"), 
+: EventSource(eventlist, "RtxScanner"),
 	_scanPeriod(scanPeriod)
 {
-	eventlist.sourceIsPendingRel(*this, _scanPeriod);
+}
+void TcpRtxTimerScanner::StartFrom(simtime_picosec startTime) {
+    eventlist().sourceIsPending(*this, startTime);
 }
 
 void 
