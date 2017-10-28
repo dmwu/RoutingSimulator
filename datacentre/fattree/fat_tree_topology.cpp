@@ -19,8 +19,6 @@ FatTreeTopology::FatTreeTopology(Logfile *lg, EventList *ev, FirstFit *fit, int 
     eventlist = ev;
     ff = fit;
 
-    //N = K * K * K /4;
-
     int num_links = K * K * K / 2 + NHOST; //[WDM] should include host links
     int num_failed = (int) (num_links * FAIL_RATE);
     cout << "num_failed = " << num_failed << endl;
