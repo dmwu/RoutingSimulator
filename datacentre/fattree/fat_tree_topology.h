@@ -66,7 +66,7 @@ public:
 
     vector<int> *get_neighbours(int src) { return NULL; };
 
-    // yiting
+    // [WDM]
     int generate_server(int rack, int rack_num);
 
     int rand_host_sw(int sw);

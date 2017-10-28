@@ -57,14 +57,14 @@ FatTreeTopology::FatTreeTopology(Logfile *lg, EventList *ev, FirstFit *fit, int 
 void FatTreeTopology::init_network() {
     QueueLoggerSampling *queueLogger;
 
-    for(int i = 0; i < NSRV; i++){
+    for (int i = 0; i < NSRV; i++) {
         HostTXQueues[i] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
                                           *eventlist, NULL, memFromPkt(RANDOM_BUFFER));
-        HostTXQueues[i]->setName("TxQueue:"+ntoa(i));
+        HostTXQueues[i]->setName("TxQueue:" + ntoa(i));
 
         HostRecvQueues[i] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
-                                          *eventlist, NULL, memFromPkt(RANDOM_BUFFER));
-        HostRecvQueues[i]->setName("RxQueue:"+ntoa(i));
+                                            *eventlist, NULL, memFromPkt(RANDOM_BUFFER));
+        HostRecvQueues[i]->setName("RxQueue:" + ntoa(i));
 
     }
 
@@ -103,7 +103,7 @@ void FatTreeTopology::init_network() {
             }
             //[WDM]handle host queues separately
             //queues_nlp_ns[j][k] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
-                                                  //*eventlist, queueLogger, memFromPkt(RANDOM_BUFFER));
+            //*eventlist, queueLogger, memFromPkt(RANDOM_BUFFER));
             //queues_nlp_ns[j][k]->setName("RX_DST_" + ntoa(k));
 
             pipes_nlp_ns[j][k] = new Pipe(timeFromUs(RTT), *eventlist);
@@ -201,7 +201,7 @@ void FatTreeTopology::init_network() {
 bool checkValid(route_t *rt) {
     for (unsigned int i = 1; i < rt->size() - 1; i += 2)
         if (rt->at(i) == NULL) {
-           return false;
+            return false;
         }
     return rt != NULL;
 }
@@ -310,9 +310,9 @@ vector<route_t *> *FatTreeTopology::get_paths_ecmp(int src, int dest) {
 }
 
 //Implemented by WDM
-route_t* FatTreeTopology::get_path_2levelrt(int src, int dest) {
+route_t *FatTreeTopology::get_path_2levelrt(int src, int dest) {
 
-    route_t* routeout = new route_t();
+    route_t *routeout = new route_t();
     RandomQueue *txqueue = HostTXQueues[src];
     routeout->push_back(txqueue);
 
@@ -324,11 +324,11 @@ route_t* FatTreeTopology::get_path_2levelrt(int src, int dest) {
         routeout->push_back(queues_ns_nlp[src][HOST_POD_SWITCH(src)]);
         routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
 
-    //under the same Pod
-    }else if (HOST_POD(src) == HOST_POD(dest)) {
+        //under the same Pod
+    } else if (HOST_POD(src) == HOST_POD(dest)) {
         int pod = HOST_POD(src);
-        int srcHostID = (src % (K*K/4)) % (K/2);
-        int destHostID = (dest % (K*K/4)) % (K/2);
+        int srcHostID = src  % (K / 2);
+        int destHostID = dest % (K / 2);
         int aggSwitchID = MIN_POD_ID(pod) + srcHostID;
 
         routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
@@ -347,15 +347,16 @@ route_t* FatTreeTopology::get_path_2levelrt(int src, int dest) {
         routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
 
 
-    }else{
+    } else {
 
         int pod = HOST_POD(src);
-        int srcHostID = (src % (K*K/4)) % (K/2);
-        int destHostID = (dest % (K*K/4)) % (K/2);
+        int srcHostID = src % (K / 2); //could be used as outgoing offset
+        int destHostID = dest % (K / 2);
         int aggSwitchID1 = MIN_POD_ID(pod) + srcHostID;
-        int core = (aggSwitchID1%(K/2)) * (K/2) + destHostID;
+        int core = (aggSwitchID1 % (K / 2)) * (K / 2) + destHostID;
+        assert(core == srcHostID*(K/2) + destHostID);
 
-        int aggSwitchID2 = HOST_POD(dest) * K / 2 + 2 * core/ K;
+        int aggSwitchID2 = HOST_POD(dest) * K / 2 + 2 * core / K;
 
         routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
 
@@ -380,7 +381,7 @@ route_t* FatTreeTopology::get_path_2levelrt(int src, int dest) {
         routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
 
     }
-    RandomQueue* rxQueue = HostRecvQueues[dest];
+    RandomQueue *rxQueue = HostRecvQueues[dest];
     routeout->push_back(rxQueue);
     return routeout;
 }

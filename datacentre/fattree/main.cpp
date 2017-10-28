@@ -44,7 +44,7 @@
 #define PRINT_PATHS 1
 #define PERIODIC 0
 
-int RTT = 100; // Identical RTT microseconds = 0.1 ms [WDM] why is this used for pipes?
+int RTT = 1; // Identical RTT microseconds = 0.001 ms [WDM] I change it to 1us to match the link speed.
 int N = NSW;
 
 FirstFit *ff = NULL;
@@ -94,14 +94,15 @@ int main(int argc, char **argv) {
         } else
             filename << "logout.dat";
 
-        if (argc > i && !strcmp(argv[i], "-sub")) {
-            subflow_count = atoi(argv[i + 1]);
-            i += 2;
-        }
-
         if (argc > i && !strcmp(argv[i], "-routing")) {
             routing = atoi(argv[i + 1]);
             i += 2;
+        }
+
+        if(routing == 0){
+            cout<<"Using ECMP Routing"<<endl;
+        }else{
+            cout<<"Using Standard Routing"<<endl;
         }
 
         if (argc > i && !strcmp(argv[i], "-fail")) {
@@ -136,8 +137,6 @@ int main(int argc, char **argv) {
     TcpRtxTimerScanner tcpRtxScanner(timeFromMs(10), eventlist);
 
     MultipathTcpSrc *mtcp;
-
-    int dest;
 
 #if USE_FIRST_FIT
     if (subflow_count==1){
@@ -195,6 +194,10 @@ int main(int argc, char **argv) {
     vector<bool *> flows_finish;
 
     vector<double>* flowStats = new vector<double>();
+
+    int src, dest;
+    route_t* path = NULL;
+
     while (getline(traf_file, line)) {
         int i = 0;
         int pos = line.find(" ");
@@ -213,13 +216,16 @@ int main(int argc, char **argv) {
         str = line.substr(i, pos - i);
         int mapper_n = atoi(str.c_str());
         vector<int> mappers;
-        vector<int> mappers_sw;
+
         for (int k = 0; k < mapper_n; k++) {
             i = ++pos;
             pos = line.find(" ", pos);
             str = line.substr(i, pos - i);
-            mappers.push_back(top->generate_server(atoi(str.c_str()), rack_n));
-            mappers_sw.push_back(atoi(str.c_str()));
+            if(SERVER_LEVEL_TRAFFIC){
+                mappers.push_back(atoi(str.c_str()));
+            }else {
+                mappers.push_back(top->generate_server(atoi(str.c_str()), rack_n));
+            }
         }
         i = ++pos;
         pos = line.find(" ", pos);
@@ -240,13 +246,14 @@ int main(int argc, char **argv) {
             int reducer = atoi(sub.c_str());
             sub = str.substr(posi + 1, str.length());
             uint64_t volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000000);
-
-            int dest = top->generate_server(reducer, rack_n);
-            int dest_sw = dest / (K / 2);
+            if(SERVER_LEVEL_TRAFFIC){
+                dest = reducer;
+            }
+            else {
+                dest = top->generate_server(reducer, rack_n);
+            }
             for (int t = 0; t < mappers.size(); t++) {
-                int src = mappers[t];
-                int src_sw = src / (K / 2);
-
+                src = mappers[t];
                 uint64_t *curnt_sent = new uint64_t;
                 *curnt_sent = 0;
                 uint64_t *curnt_recv = new uint64_t;
@@ -256,9 +263,8 @@ int main(int argc, char **argv) {
                 flows_sent.push_back(curnt_sent);
                 flows_recv.push_back(curnt_recv);
                 flows_finish.push_back(curnt_finish);
-
-                route_t* path = NULL;
-                if(routing == 0){//ecmp
+                if(routing == 0){
+                    //ecmp
                     if (!net_paths[src][dest]) {
                         net_paths[src][dest] = top->get_paths_ecmp(src, dest);
                     }
@@ -332,6 +338,7 @@ int main(int argc, char **argv) {
                 RandomQueue* srcRxQueue = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
                                                           eventlist, NULL, memFromPkt(RANDOM_BUFFER));
                 srcRxQueue->setName("SRC_RX"+ntoa(src)+"-"+ntoa(dest));
+
                 routein->push_back(srcRxQueue);
 
                 routein->push_back(tcpSrc);
@@ -351,7 +358,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    cout << "Total Number of TCP flows:" << ++connID << endl;
+    cout << "Total Number of TCP flows:" << connID << endl;
     double rtt = timeAsSec(timeFromUs(RTT));
     tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     // GO!
@@ -364,6 +371,8 @@ int main(int argc, char **argv) {
     for (int i =0; i < flowStats->size(); i++){
         sum += flowStats->at(i);
     }
+    cout<<"Routing:"<<routing<<endl;
+    cout<<"finished flows:"<<flowStats->size()<<" all flows:"<<connID<<endl;
     cout<<"Average coFCT:"<<sum/flowStats->size()<<endl;
 }
 
@@ -380,7 +389,7 @@ string itoa(uint64_t n) {
 }
 
 bool isRouteValid(route_t *rt) {
-    for (unsigned int i = 1; i < rt->size() - 1; i += 2) {
+    for (unsigned int i = 0; i < rt->size(); i += 2) {
         if (rt->at(i) == NULL) {
             return false;
         }

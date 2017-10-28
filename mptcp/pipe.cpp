@@ -4,6 +4,10 @@ Pipe::Pipe(simtime_picosec delay, EventList& eventlist)
 : EventSource(eventlist,"pipe"),
 	_delay(delay)
 	{}
+Pipe::Pipe(simtime_picosec delay, EventList& eventlist, uint32_t gid)
+        : EventSource(eventlist,"pipe"),
+          _delay(delay), _gid(gid)
+{}
 
 void
 Pipe::receivePacket(Packet& pkt)
