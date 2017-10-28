@@ -10,7 +10,7 @@
 #define SP 0		// P = total ports on switch
 
 // FAT
-#define K 8
+#define K 16
 #define SERVER_LEVEL_TRAFFIC 1
 #define RATIO 1 //MUST BE 1 IF USING 2-LEVEL ROUTING
 #define NSW K*K*5/4
