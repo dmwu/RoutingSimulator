@@ -51,7 +51,8 @@ void RandomQueue::receivePacket(Packet &pkt) {
     bool queueWasEmpty = _enqueued.empty();
     _enqueued.push_front(&pkt);
     _queuesize += pkt.size();
-    if (_logger) _logger->logQueue(*this, QueueLogger::PKT_ENQUEUE, pkt);
+    if (_logger)
+        _logger->logQueue(*this, QueueLogger::PKT_ENQUEUE, pkt);
     if (queueWasEmpty) {
         assert(_enqueued.size() == 1);
         beginService();

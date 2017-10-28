@@ -53,7 +53,7 @@ FatTreeTopology::FatTreeTopology(Logfile *lg, EventList *ev, FirstFit *fit, int 
 }
 
 void FatTreeTopology::init_network() {
-    QueueLoggerSampling *queueLogger;
+    QueueLoggerSampling *queueLogger = NULL;
 
     for (int i = 0; i < NSRV; i++) {
         HostTXQueues[i] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
