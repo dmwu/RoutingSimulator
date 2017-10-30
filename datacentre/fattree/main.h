@@ -10,7 +10,7 @@
 #define SP 0		// P = total ports on switch
 
 // FAT
-#define K 16
+#define K 8
 #define SERVER_LEVEL_TRAFFIC 1
 #define RATIO 1 //MUST BE 1 IF USING 2-LEVEL ROUTING
 #define NSW K*K*5/4
@@ -18,7 +18,7 @@
 
 #define SW_BW 1250000 // switch link bandwidth in pps = 10Gbps
 #define HOST_NIC SW_BW // host nic speed in pps
-#define CORE_TO_HOST 10
+#define CORE_TO_HOST 1 // right now it is non-blocking
 #define NUMPATHS 1
 
 // TOPOLOGY NUMBERING

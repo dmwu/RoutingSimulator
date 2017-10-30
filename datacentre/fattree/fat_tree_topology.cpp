@@ -100,9 +100,6 @@ void FatTreeTopology::init_network() {
                 continue;
             }
             //[WDM]handle host queues separately
-            //queues_nlp_ns[j][k] = new RandomQueue(speedFromPktps(HOST_NIC), memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
-            //*eventlist, queueLogger, memFromPkt(RANDOM_BUFFER));
-            //queues_nlp_ns[j][k]->setName("RX_DST_" + ntoa(k));
 
             pipes_nlp_ns[j][k] = new Pipe(timeFromUs(RTT), *eventlist);
             pipes_nlp_ns[j][k]->setName("Pipe-nt-ns-" + ntoa(j) + "-" + ntoa(k));

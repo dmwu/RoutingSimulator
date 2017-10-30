@@ -374,6 +374,13 @@ int main(int argc, char **argv) {
     cout<<"Routing:"<<routing<<endl;
     cout<<"finished flows:"<<flowStats->size()<<" all flows:"<<connID<<endl;
     cout<<"Average coFCT:"<<sum/flowStats->size()<<endl;
+    std::sort(flowStats->begin(), flowStats->end());
+    std::ofstream ofs;
+    ofs.open ("fcts"+filename.str()+".txt", std::ofstream::out);
+    for(int i = 0; i < flowStats->size();i++){
+        ofs<<flowStats->at(i)<<endl;
+    }
+    ofs.close();
 }
 
 string ntoa(double n) {

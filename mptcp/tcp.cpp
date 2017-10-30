@@ -190,7 +190,7 @@ TcpSrc::receivePacket(Packet& pkt)
         *_flow_finish = true;
         double comp_time_ms = (eventlist().now()/1e9) - _flow_start_time_ms;
         double rate = (_flow_volume_bytes/1e6) / (comp_time_ms/1e3);
-        //cout << "coflow:"<<_coflowID <<" subflow:" << _super_id << " compTime(ms):" << comp_time_ms<< " now(ms):" << (double)eventlist().now()/1e9 << " rate(MB/s):" << rate << endl;
+        cout << "coflow:"<<_coflowID <<" subflow:" << _super_id << " compTime(ms):" << comp_time_ms<< " now(ms):" << (double)eventlist().now()/1e9 << " rate(MB/s):" << rate << endl;
         _flowStats->push_back(comp_time_ms);
         return;
     }
