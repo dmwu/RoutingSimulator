@@ -1,13 +1,11 @@
 #include "pipe.h"
 #include <iostream>
 Pipe::Pipe(simtime_picosec delay, EventList& eventlist)
-: EventSource(eventlist,"pipe"),
-	_delay(delay)
+: EventSource(eventlist,"pipe"), _delay(delay)
 	{}
-Pipe::Pipe(simtime_picosec delay, EventList& eventlist, uint32_t gid)
-        : EventSource(eventlist,"pipe"),
-          _delay(delay), _gid(gid)
-{}
+Pipe::Pipe(simtime_picosec delay, EventList& eventlist, string gid)
+        : EventSource(eventlist,"pipe"), _delay(delay)
+{_gid = gid;}
 
 void
 Pipe::receivePacket(Packet& pkt)
@@ -15,7 +13,7 @@ Pipe::receivePacket(Packet& pkt)
   pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_ARRIVE);
   if (_inflight.empty()){
     // no packets currently inflight; need to notify the eventlist we've an event pending 
-    eventlist().sourceIsPendingRel(*this,_delay);
+    eventlist().sourceIsPendingRel(*this, _delay);
     //cout<<"+";
   }
   _inflight.push_front(make_pair(eventlist().now()+_delay, &pkt));

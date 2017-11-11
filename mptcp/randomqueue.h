@@ -14,7 +14,7 @@
 class RandomQueue : public Queue {
 public:
 	RandomQueue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist, QueueLogger* logger, mem_b drop);
-	RandomQueue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist, uint32_t gid,QueueLogger* logger, mem_b drop);
+	RandomQueue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist, QueueLogger* logger, mem_b drop, string gid, int switchId);
 	void receivePacket(Packet& pkt);
 	void set_packet_loss_rate(double v);
 // should really be private, but loggers want to see

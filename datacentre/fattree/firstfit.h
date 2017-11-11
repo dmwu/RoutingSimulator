@@ -1,7 +1,7 @@
 #ifndef firstfit
 #define firstfit
 
-#include "main.h"
+#include "../../main.h"
 #include "tcp.h"
 #include "randomqueue.h"
 #include "eventlist.h"

@@ -11,8 +11,15 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES_FATTREE datacentre/fattree)
+set(SOURCE_FILES_F10 datacentre/F10)
 
 set(SOURCE_FILES_MPTCP mptcp)
 
+include_directories(${SOURCE_FILES_MPTCP} ${SOURCE_FILES_FATTREE} ${SOURCE_FILES_F10})
+
 add_subdirectory(${SOURCE_FILES_FATTREE})
+add_subdirectory(${SOURCE_FILES_F10})
 add_subdirectory(${SOURCE_FILES_MPTCP})
+
+add_executable(main main.cpp)
+target_link_libraries (main LINK_PUBLIC mptcp f10 fattree)

@@ -15,7 +15,7 @@ class EventSource : public Logged {
 		inline EventList& eventlist() const {return _eventlist;}
 	protected:
 		EventList& _eventlist;
-	};
+};
 
 class EventList {
 public:
@@ -26,6 +26,7 @@ public:
 		void sourceIsPendingRel(EventSource &src, simtime_picosec timefromnow)
 			{ sourceIsPending(src, now()+timefromnow); }
 		inline simtime_picosec now() const {return _lasteventtime;}
+		uint32_t globalPacketDrops =0;
 private:
     simtime_picosec _endtime;
     simtime_picosec _lasteventtime;

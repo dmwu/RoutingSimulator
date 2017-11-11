@@ -26,7 +26,8 @@ typedef uint64_t simtime_picosec;
 
 int pareto(int xm, int mean);
 double exponential(double lambda);
-
+std::string ntoa(double n);
+std::string itoa(uint64_t n);
 simtime_picosec timeFromSec(double secs);
 simtime_picosec timeFromMs(double msecs);
 simtime_picosec timeFromMs(int msecs);

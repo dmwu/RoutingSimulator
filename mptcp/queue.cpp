@@ -9,12 +9,13 @@ Queue::Queue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist, QueueLo
     _ps_per_byte = (simtime_picosec) ((pow(10.0, 12.0) * 8) / _bitrate);
 }
 
-Queue::Queue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist,uint32_t gid, QueueLogger *logger)
+Queue::Queue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist, QueueLogger *logger, string gid, int sid)
         : EventSource(eventlist, "queue"),
           _maxsize(maxsize), _logger(logger), _bitrate(bitrate) {
     _queuesize = 0;
     _ps_per_byte = (simtime_picosec) ((pow(10.0, 12.0) * 8) / _bitrate);
     _gid = gid;
+    _switchId = sid;
 }
 
 void Queue::beginService() {
@@ -46,11 +47,12 @@ void Queue::doNextEvent() {
 
 
 void Queue::receivePacket(Packet &pkt) {
-    if (_queuesize + pkt.size() > _maxsize) {
+    if (_disabled || _queuesize + pkt.size() > _maxsize) {
         if (_logger)
             _logger->logQueue(*this, QueueLogger::PKT_DROP, pkt);
         pkt.flow().logTraffic(pkt, *this, TrafficLogger::PKT_DROP);
         pkt.free();
+        cout<<"[Packet Drop]"<<pkt.flow().str()<<" at "<<this->str()<<endl;
         return;
     }
 

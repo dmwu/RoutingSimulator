@@ -14,7 +14,7 @@
 class Queue : public EventSource, public PacketSink {
 public:
     Queue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist, QueueLogger *logger);
-    Queue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist, uint32_t gid, QueueLogger *logger);
+    Queue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist,  QueueLogger *logger, string gid, int sid);
 
     virtual void receivePacket(Packet &pkt);
 
@@ -23,12 +23,12 @@ public:
 // should really be private, but loggers want to see
     mem_b _maxsize;
     mem_b _queuesize;
-    u_int32_t _gid;
-
+    Queue* _dualQueue;
     inline simtime_picosec drainTime(Packet *pkt) { return (simtime_picosec) (pkt->size()) * _ps_per_byte; }
 
     inline mem_b serviceCapacity(simtime_picosec t) { return (mem_b) (timeAsSec(t) * (double) _bitrate); }
-
+    inline void setDualQueue(Queue* dual){_dualQueue = dual; dual->_dualQueue=this;}
+    virtual PacketSink* getDual(){return _dualQueue;}
 protected:
     // Housekeeping
     QueueLogger *_logger;
