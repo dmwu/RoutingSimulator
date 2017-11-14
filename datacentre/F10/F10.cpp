@@ -544,16 +544,6 @@ pair<Queue *, Queue *> F10Topology::linkToQueues(int linkid) {
     return ret;
 }
 
-void F10Topology::printPath(std::ostream &out, route_t *rt) {
-    for (unsigned int i = 0; i < rt->size(); i += 2) {
-        Queue *q = (Queue *) rt->at(i);
-        if (q != NULL)
-            out << q->_gid << " ";
-        else
-            out << "NULL ";
-    }
-    out << endl;
-}
 
 int F10Topology::getServerUnderTor(int torIndex, int torNum) {
     int total = K * K / 2;

@@ -26,10 +26,13 @@ class LinkFailureEvent: public EventSource {
 public:
     LinkFailureEvent(EventList& eventlist, Topology* topo,  simtime_picosec startFrom, simtime_picosec failureTime, int linkid);
     LinkFailureEvent(EventList& eventlist, Topology* topo);
+    LinkFailureEvent(EventList& eventList, simtime_picosec startFrom, simtime_picosec failureTime, int linkid);
     void setStartEndTime(simtime_picosec startFrom, simtime_picosec endTime);
     void setFailedLinkid(int linkid);
     void installEvent();
     void setFailureRecoveryDelay(simtime_picosec setupReroutingDelay, simtime_picosec pathRestoreDelay);
+    void setTopology(Topology*);
+    double getThroughputOfImpactedFlows(map<int,double>* flowStats);
     void doNextEvent();
     simtime_picosec _startFrom;
     simtime_picosec _failureTime;

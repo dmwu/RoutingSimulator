@@ -78,8 +78,6 @@ public:
 
     virtual pair<Queue *, Queue *> linkToQueues(int linkid);
 
-    virtual void printPath(std::ostream &out, route_t *route);
-
 
 protected:
     map<RandomQueue *, int> _link_usage;

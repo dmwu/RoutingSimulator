@@ -28,11 +28,11 @@ class TcpSrc : public PacketSink, public EventSource {
 public:
     TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventlist);
 
-    TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventList, vector<double> *flowStatistics);
+    TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventList, map<int, double>*flowStatistics);
 
     TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventlist, uint64_t *total_sent,
            uint64_t *total_received, uint64_t volume, bool *finish, double start_ms, int super_id, int coflowId,
-           vector<double> *flowStatistics);
+           map<int, double>*flowStatistics);
 
     virtual void connect(route_t &routeout, route_t &routeback, TcpSink &sink, simtime_picosec startTime_ps);
 
@@ -102,7 +102,7 @@ public:
     route_t *_route;
     simtime_picosec _last_ping;
 
-    vector<double> *_flowStats;
+    map<int, double>* _flowStats;
 #ifdef PACKET_SCATTER
     vector<route_t*>* _paths;
 

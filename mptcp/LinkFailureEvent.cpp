@@ -19,10 +19,19 @@ LinkFailureEvent::LinkFailureEvent(EventList &eventlist, Topology *topo)
     _connections = new vector<FlowConnection *>();
 }
 
+LinkFailureEvent::LinkFailureEvent(EventList &eventList, simtime_picosec startFrom, simtime_picosec failureTime,
+                                   int linkid):EventSource(eventList,"LinkFailureEvent"), _startFrom(startFrom),
+                                               _failureTime(failureTime), _linkid(linkid) {
+    _connections = new vector<FlowConnection*>();
+
+}
 void LinkFailureEvent::setFailedLinkid(int linkid) {
     _linkid = linkid;
 }
 
+void LinkFailureEvent::setTopology(Topology *topo) {
+    _topo = topo;
+}
 void LinkFailureEvent::setStartEndTime(simtime_picosec startFrom, simtime_picosec failureTime) {
     _startFrom = startFrom;
     _failureTime = failureTime;
@@ -56,7 +65,7 @@ void LinkFailureEvent::doNextEvent() {
             route_t*currentPath = new route_t(fc->_tcpSrc->_route->begin(), fc->_tcpSrc->_route->end()-1);
             pair<route_t *, route_t *> newDataPath = _topo->getReroutingPath(fc->_src, fc->_dest, currentPath);
             if (newDataPath.first && newDataPath.second) {
-                cout << "route change for flow " << fc->_src << "->" << fc->_dest << endl;
+                cout << "route change for flow " << fc->_src << "->" << fc->_dest <<" timeout:"<<fc->_tcpSrc->_rto/1000000000<<endl;
                 cout << "[old path]---- ";
                 _topo->printPath(cout, fc->_tcpSrc->_route);
                 fc->_tcpSrc->replace_route(newDataPath.first);
@@ -121,3 +130,17 @@ bool LinkFailureEvent::isPathOverlapping(route_t *path) {
 
 FlowConnection::FlowConnection(TcpSrc *tcpSrc, TcpSink *tcpSink, int src, int dest)
         : _tcpSrc(tcpSrc), _tcpSink(tcpSink), _src(src), _dest(dest) {}
+
+double LinkFailureEvent::getThroughputOfImpactedFlows(map<int, double> *flowStats) {
+    double sum = 0;
+    int count = 0;
+    for(FlowConnection* fc: *_connections){
+        int key = fc->_tcpSrc->_super_id;
+        if(flowStats->count(key)>0 ){
+            sum+=flowStats->at(key);
+            count++;
+        }
+    }
+    cout<<"impacted flows count:"<<count<<endl;
+    return count==0?count:sum/count;
+}

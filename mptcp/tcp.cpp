@@ -1,5 +1,6 @@
 #include "tcp.h"
 #include "mtcp.h"
+#include "topology.h"
 #include <iostream>
 
 ////////////////////////////////////////////////////////////////
@@ -7,7 +8,7 @@
 ////////////////////////////////////////////////////////////////
 
 TcpSrc::TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger,
-               EventList &eventlist, vector<double> *flowStats)
+               EventList &eventlist, map<int, double>*flowStats)
         : EventSource(eventlist, "tcp"), _logger(logger), _flow(pktlogger) {
     _mss = TcpPacket::DEFAULTDATASIZE;
     _maxcwnd = 0xffffffff;//MAX_SENT*_mss;
@@ -65,7 +66,7 @@ TcpSrc::TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventlist
 TcpSrc::TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger,
                EventList &eventlist, uint64_t *total_sent, uint64_t *total_received,
                uint64_t volume, bool *finish, double startTime_ms, int super_id, int coflowId,
-               vector<double> *flowStats)
+               map<int, double>*flowStats)
         : EventSource(eventlist, "tcp"), _logger(logger), _flow(pktlogger) {
     _mss = TcpPacket::DEFAULTDATASIZE;
     _maxcwnd = 0xffffffff;//MAX_SENT*_mss;
@@ -192,7 +193,8 @@ TcpSrc::receivePacket(Packet &pkt) {
         double rate = (_flow_volume_bytes / 1e6) / (comp_time_ms / 1e3);
         cout << "coflow:"<<_coflowID <<" "<<(*_route)[0]->_gid<<"->"<<(*_route)[_route->size()-2]->_gid <<" "<<
              _super_id << " compTime(ms):" << comp_time_ms<< " now(ms):" << (double)eventlist().now()/1e9 << " rate(MB/s):" << rate << endl;
-        _flowStats->push_back(comp_time_ms);
+        _flowStats->insert(pair<int,double>(_super_id, comp_time_ms));
+        Topology::printPath(cout, _route);
         return;
     }
 
@@ -452,10 +454,9 @@ void TcpSrc::rtx_timer_hook(simtime_picosec now, simtime_picosec period) {
     // we should minimize them !
     if (!_rtx_timeout_pending) {
         _rtx_timeout_pending = true;
-
+        this->eventlist().globalTimeOuts++;
         // check the timer difference between the event and the real value
         simtime_picosec too_late = now - (_RFC2988_RTO_timeout);
-
         // careful: we might calculate a negative value if _rto suddenly drops very much
         // to prevent overflow but keep randomness we just divide until we are within the limit
         while (too_late > period) too_late >>= 1;
@@ -463,7 +464,9 @@ void TcpSrc::rtx_timer_hook(simtime_picosec now, simtime_picosec period) {
         // carry over the difference for restarting
         simtime_picosec rtx_off = (period - too_late) / 200;
 
-        eventlist().sourceIsPendingRel(*this, rtx_off);
+        //[WDM] since its already late, why not retransmit now
+        //eventlist().sourceIsPendingRel(*this, rtx_off);
+        eventlist().sourceIsPending(*this, now);
 
         //reset our rtx timerRFC 2988 5.5 & 5.6
 

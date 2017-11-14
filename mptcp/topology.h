@@ -3,7 +3,7 @@
 
 #include <sstream>
 #include "network.h"
-
+#include "queue.h"
 typedef vector<PacketSink *> route_t;
 
 class Topology {
@@ -25,7 +25,16 @@ public:
 
     virtual vector<int>* get_neighbours(int src) = 0;
 
-    virtual void printPath(std::ostream& out, route_t *route) = 0;
+    static void printPath(std::ostream& out, route_t *rt){
+        for (unsigned int i = 0; i < rt->size(); i += 2) {
+            Queue *q = (Queue *) rt->at(i);
+            if (q != NULL)
+                out << q->_gid << " ";
+            else
+                out << "NULL ";
+        }
+        out << endl;
+    }
 
     int RTT = 1; // Identical RTT microseconds = 0.001 ms [WDM] I change it to 1us to match the link speed.
 

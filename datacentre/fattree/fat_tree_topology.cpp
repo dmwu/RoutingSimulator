@@ -572,14 +572,4 @@ pair<route_t *, route_t *> FatTreeTopology::getReroutingPath(int src, int dest, 
     return make_pair(nullptr, nullptr);
 }
 
-void FatTreeTopology::printPath(std::ostream &out, route_t *rt){
-    for (unsigned int i = 0; i < rt->size(); i += 2) {
-        Queue *q = (Queue *) rt->at(i);
-        if (q != NULL)
-            out << q->_gid << " ";
-        else
-            out << "NULL ";
-    }
-    out << endl;
-}
 
