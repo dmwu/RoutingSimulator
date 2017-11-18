@@ -1,4 +1,6 @@
 #!/bin/bash
+cd ../cmake-build-debug
+cmake ..
 for top in 0 1 2
     do
     for failLink in 0 1024 2048
