@@ -1,5 +1,6 @@
 #include "fat_tree_topology.h"
 #include <iostream>
+#include <random>
 
 
 string ntoa(double n);
@@ -548,7 +549,9 @@ pair<route_t *, route_t *> FatTreeTopology::getReroutingPath(int src, int dest, 
         _net_paths[src][dest] = get_paths_ecmp(src, dest);
     }
     vector<route_t *> *paths = _net_paths[src][dest];
-    std::random_shuffle(paths->begin(), paths->end());
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(paths->begin(), paths->end(),g);
     for (route_t *path: *paths) {
         if (isPathValid(path)) {
             route_t *ackPath = new route_t();
