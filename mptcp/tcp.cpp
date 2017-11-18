@@ -649,5 +649,5 @@ void TcpSrc::handleFlowCompletion() {
     fc->_completionTimeMs = eventlist().now();
     fc->_duration = duration_ms;
     _flowStats->insert(pair<int, FlowConnection *>(_super_id, fc));
-    Topology::printPath(cout, _route);
+    //Topology::printPath(cout, _route);
 }
