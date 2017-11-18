@@ -1,11 +1,5 @@
 #include "fat_tree_topology.h"
-#include <vector>
-#include "string.h"
-#include <sstream>
-#include <strstream>
 #include <iostream>
-#include <algorithm>
-#include "../../main.h"
 
 
 string ntoa(double n);
