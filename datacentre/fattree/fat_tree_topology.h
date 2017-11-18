@@ -14,18 +14,6 @@
 
 #define FAIL_RATE 0.0
 
-#define NK (K*K/2)
-#define NC (K*K/4)
-#define NSRV (K*K*K*RATIO/4)
-//#define N K*K*K/4
-
-#define HOST_POD_SWITCH(src) (2*src/(K*RATIO))
-//#define HOST_POD_ID(src) src%NSRV
-#define HOST_POD(src) (src/(NC*RATIO))
-
-#define MIN_POD_ID(pod_id) (pod_id*K/2)
-#define MAX_POD_ID(pod_id) ((pod_id+1)*K/2-1)
-
 class FatTreeTopology : public Topology {
 public:
     Pipe *pipes_nc_nup[NC][NK];

@@ -34,11 +34,13 @@ void F10Topology::init_network() {
                                           memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
                                           *_eventlist, NULL, memFromPkt(RANDOM_BUFFER),
                                           "TxQueue:" + ntoa(i), -1);
+        HostTXQueues[i]->_isHostQueue=true;
 
         HostRecvQueues[i] = new RandomQueue(speedFromPktps(HOST_NIC),
                                             memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
                                             *_eventlist, NULL, memFromPkt(RANDOM_BUFFER),
                                             "RxQueue:" + ntoa(i), -1);
+        HostRecvQueues[i]->_isHostQueue=true;
     }
 
     for (int j = 0; j < NC; j++)

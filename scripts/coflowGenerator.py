@@ -47,6 +47,6 @@ if __name__ == "__main__":
     dataSize_MB = int(sys.argv[2])
     print 'numServers:%d, podSize:%d dataSize_MB:%d' % (numServers, podSize, dataSize_MB)
     #all2all_generator(numServers, "all2all_"+str(numServers), dataSize_MB)
-    pod2pod_generator(podSize, 0, 0+podSize, 'pod2pod_'+str(podSize), dataSize_MB)
-    #rack2rack_generator(K/2, 0, 0+podSize, 'rack2rack_'+str(K/2), dataSize_MB)
+    #pod2pod_generator(podSize, 0, 0+podSize, 'pod2pod_'+str(podSize), dataSize_MB)
+    rack2rack_generator(K/2, 0, 0+podSize, 'rack2rack_'+str(K/2), dataSize_MB)
 

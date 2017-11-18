@@ -26,7 +26,9 @@ void RandomQueue::set_packet_loss_rate(double l) {
 }
 
 void RandomQueue::receivePacket(Packet &pkt) {
-
+    if(this->_gid=="Queue-up-lp-3-3"){
+        //cout<<"Packet Arrival:"<<pkt._src<<"->"<<pkt._dest<<" at "<<eventlist().now()/1e6<<"us"<<endl;
+    }
     if (_disabled){
         this->eventlist().linkFailurePacketDrops++;
         if(pkt.size() <= 40)
@@ -48,9 +50,7 @@ void RandomQueue::receivePacket(Packet &pkt) {
     if (crt > _maxsize) {
         if (_logger) _logger->logQueue(*this, QueueLogger::PKT_DROP, pkt);
         pkt.flow().logTraffic(pkt, *this, TrafficLogger::PKT_DROP);
-        if (crt > _maxsize) {
-            _buffer_drops++;
-        }
+        _buffer_drops++;
         pkt.free();
         this->eventlist().bufferOverflowPacketDrops++;
         return;

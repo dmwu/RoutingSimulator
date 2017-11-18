@@ -20,7 +20,11 @@ Queue::Queue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist, QueueLo
 
 void Queue::beginService() {
     assert(!_enqueued.empty());
-    eventlist().sourceIsPendingRel(*this, drainTime(_enqueued.back()));
+    int delay = 0;
+    if(!_isHostQueue){
+        delay = drainTime(_enqueued.back());
+    }
+    eventlist().sourceIsPendingRel(*this, delay);
 }
 
 void Queue::completeService() {
@@ -33,6 +37,9 @@ void Queue::completeService() {
 
     _queuesize -= pkt->size();
 
+    if(this->_gid=="Queue-up-lp-3-3"){
+       // cout<<"[Packet Depart]:"<<pkt->_src<<"->"<<pkt->_dest<<" at "<<eventlist().now()/1e6<<"us"<<endl;
+    }
     pkt->flow().logTraffic(*pkt, *this, TrafficLogger::PKT_DEPART);
     if (_logger)
         _logger->logQueue(*this, QueueLogger::PKT_SERVICE, *pkt);

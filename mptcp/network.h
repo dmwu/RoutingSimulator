@@ -41,7 +41,8 @@ public:
     free() =0; // say "this packet is no longer wanted". (doesn't necessarily destroy it, so it can be reused)
     virtual void sendOn(); // "go on to the next hop along your route"
     int size() const { return _size; }
-
+    int _src;
+    int _dest;
     PacketFlow &flow() const { return *_flow; }
 
     virtual ~Packet() {};
@@ -76,7 +77,7 @@ class PacketSink {
 public:
     PacketSink() {}
     string _gid = "";
-    int _switchId = -1;
+    int _switchId = -2;
     virtual ~PacketSink() {}
     virtual void receivePacket(Packet &pkt) =0;
     virtual PacketSink* getDual() = 0;

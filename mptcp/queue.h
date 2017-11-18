@@ -19,12 +19,15 @@ public:
     virtual void receivePacket(Packet &pkt);
 
     void doNextEvent();
-
+    bool _isHostQueue = false;
 // should really be private, but loggers want to see
     mem_b _maxsize;
     mem_b _queuesize;
     Queue* _dualQueue;
-    inline simtime_picosec drainTime(Packet *pkt) { return (simtime_picosec) (pkt->size()) * _ps_per_byte; }
+    inline simtime_picosec drainTime(Packet *pkt) {
+        simtime_picosec temp =(simtime_picosec) (pkt->size()) * _ps_per_byte;
+        return temp;
+    }
 
     inline mem_b serviceCapacity(simtime_picosec t) { return (mem_b) (timeAsSec(t) * (double) _bitrate); }
     inline void setDualQueue(Queue* dual){_dualQueue = dual; dual->_dualQueue=this;}

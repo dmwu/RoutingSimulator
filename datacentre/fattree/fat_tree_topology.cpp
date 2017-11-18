@@ -43,11 +43,13 @@ void FatTreeTopology::init_network() {
                                           memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
                                           *_eventlist, NULL, memFromPkt(RANDOM_BUFFER),
                                           "TxQueue:" + ntoa(i), -1);
+        HostTXQueues[i]->_isHostQueue=true;
 
         HostRecvQueues[i] = new RandomQueue(speedFromPktps(HOST_NIC),
                                             memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
                                             *_eventlist, NULL, memFromPkt(RANDOM_BUFFER),
                                             "RxQueue:" + ntoa(i), -1);
+        HostRecvQueues[i]->_isHostQueue=true;
     }
 
     for (int j = 0; j < NC; j++)
@@ -165,7 +167,7 @@ void FatTreeTopology::init_network() {
     }
 }
 
-vector<route_t *> *FatTreeTopology::get_paths_ecmp(int src, int dest) {
+vector<route_t *> * FatTreeTopology::get_paths_ecmp(int src, int dest) {
     vector<route_t *> *paths = new vector<route_t *>();
 
     route_t *routeout;
@@ -434,7 +436,7 @@ int FatTreeTopology::getServerUnderTor(int tor,  int rack_num) {
 }
 
 int FatTreeTopology::rand_host_sw(int sw) {
-    int hostPerEdge = K / 2;
+    int hostPerEdge = K*RATIO / 2;
     int server_sw = rand() % hostPerEdge;
     int server = sw * hostPerEdge + server_sw;
     return server;

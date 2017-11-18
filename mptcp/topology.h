@@ -36,7 +36,6 @@ public:
         out << endl;
     }
 
-    int RTT = 1; // Identical RTT microseconds = 0.001 ms [WDM] I change it to 1us to match the link speed.
 
     string ntoa(double n) {
         stringstream s;
