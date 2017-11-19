@@ -21,6 +21,5 @@ for entry in ./top*.txt
     tail -n 8 "$entry" >> "final.txt"
     echo "" >> "final.txt"
 done
-rm ./top*.txt
 
 
