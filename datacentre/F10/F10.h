@@ -58,6 +58,7 @@ public:
     virtual pair<route_t *, route_t *> getReroutingPath(int src, int dest, route_t*);
 
     virtual pair<route_t*, route_t*> getStandardPath(int src, int dest);
+    virtual pair<route_t*, route_t*> getEcmpPath(int src, int dest);
 
     virtual vector<int> *get_neighbours(int src) { return NULL; };
 
@@ -75,6 +76,8 @@ protected:
     route_t *get_path_2levelrt(int src, int dest);
 
     bool isPathValid(route_t *path);
+
+    route_t* getReversePath(int src, int dest, route_t*dataPath);
 
 
 };

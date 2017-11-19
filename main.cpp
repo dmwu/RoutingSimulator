@@ -61,7 +61,7 @@ void exit_error(char *progr) {
 
 int main(int argc, char **argv) {
     clock_t begin = clock();
-    eventlist.setEndtime(timeFromSec(5000.01));
+    eventlist.setEndtime(timeFromSec(2000.01));
 
     double simStartingTime_ms = -1;
     double epsilon = 1;
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
     LinkFailureEvent* linkFailureEvent;
     if(topology<=1) {
         top = new FatTreeTopology(&eventlist);
-        linkFailureEvent = new LinkFailureEvent(eventlist, top, timeFromSec(50), timeFromSec(500), failedLinkId);
+        linkFailureEvent = new LinkFailureEvent(eventlist, top, timeFromSec(100), timeFromSec(300), failedLinkId);
         linkFailureEvent->setFailureRecoveryDelay(timeFromMs(GLOBAL_REROUTE_DELAY), timeFromMs(GLOBAL_REROUTE_DELAY));
         if(topology==1){
             linkFailureEvent->UsingShareBackup = true;
@@ -294,7 +294,6 @@ int main(int argc, char **argv) {
     }
 
     cout << "Total Number of TCP flows:" << connID << endl;
-    double rtt = timeAsSec(timeFromUs(RTT));
     tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     if(failedLinkId >=0 && failedLinkId < 3*K*K*K/4) {
         linkFailureEvent->installEvent();

@@ -17,6 +17,7 @@ public:
 
     virtual pair<route_t*, route_t*> getReroutingPath(int src, int dest, route_t* currrentPath) = 0;
 
+    virtual pair<route_t*, route_t*> getEcmpPath(int src, int dest) = 0;
 
     virtual pair<route_t*, route_t*> getStandardPath(int src, int dest) = 0;
 

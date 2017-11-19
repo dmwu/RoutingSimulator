@@ -174,7 +174,7 @@ void LinkFailureEvent::rerouting(){
                 cout << "[new path]----";
                 _topo->printPath(cout, fc->_tcpSrc->_route);
             } else {
-                cout << "Now:"<<eventlist().now()
+                cout << "Now:"<<eventlist().now()/1e9
                      <<" link failure:"<<_linkid<<" no path in failure recovery for flow " << fc->_src << "->" << fc->_dest << endl;
             }
         }

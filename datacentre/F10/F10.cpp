@@ -3,6 +3,8 @@
 //
 
 #include <iostream>
+#include <random>
+#include <algorithm>
 #include "F10.h"
 
 F10Topology::F10Topology(EventList *ev) {
@@ -469,15 +471,7 @@ pair<route_t *, route_t *> F10Topology::getStandardPath(int src, int dest) {
 
     route_t *path = get_path_2levelrt(src, dest);
     if (isPathValid(path)) {
-        route_t *ackPath = new route_t();
-        assert(path->size() >= 2);
-        for (int i = path->size() - 2; i >= 0; i -= 2) {
-            PacketSink *dualQueue = path->at(i + 1)->getDual();
-            PacketSink *dualPipe = path->at(i)->getDual();
-            ackPath->push_back(dualPipe);
-            ackPath->push_back(dualQueue);
-        }
-        ackPath->insert(ackPath->begin(), HostTXQueues[dest]);
+        route_t *ackPath = getReversePath(src,dest,path);
         if (isPathValid(ackPath)) {
             return make_pair(path, ackPath);
         }
@@ -492,15 +486,7 @@ pair<route_t *, route_t *> F10Topology::getReroutingPath(int src, int dest, rout
     }
     route_t* path = getAlternativePath(src, dest, currentPath);
     if (isPathValid(path)) {
-        route_t *ackPath = new route_t();
-        assert(path->size()>=2);
-        for(int i = path->size()-2; i>=0; i-=2){
-            PacketSink* dualQueue = path->at(i+1)->getDual();
-            PacketSink* dualPipe = path->at(i)->getDual();
-            ackPath->push_back(dualPipe);
-            ackPath->push_back(dualQueue);
-        }
-        ackPath->insert(ackPath->begin(), HostTXQueues[dest]);
+        route_t *ackPath = getReversePath(src, dest, path);
         if (isPathValid(ackPath)) {
             return make_pair(path, ackPath);
         }
@@ -508,6 +494,37 @@ pair<route_t *, route_t *> F10Topology::getReroutingPath(int src, int dest, rout
 
     return make_pair(nullptr, nullptr);
 
+}
+
+pair<route_t*, route_t*> F10Topology::getEcmpPath(int src, int dest) {
+    if (_net_paths[src][dest] == NULL) {
+        _net_paths[src][dest] = get_paths_ecmp(src, dest);
+    }
+    vector<route_t *> *paths = _net_paths[src][dest];
+    auto rng = std::default_random_engine {};
+    std::shuffle(std::begin(*paths), std::end(*paths), rng);
+    for (route_t *path: *paths) {
+        if (isPathValid(path)) {
+            route_t* ackPath = getReversePath(src, dest, path);
+            if (isPathValid(ackPath)) {
+                return make_pair(path, ackPath);
+            }
+        }
+    }
+    return make_pair(nullptr, nullptr);
+}
+
+route_t* F10Topology::getReversePath(int src, int dest, route_t *dataPath) {
+    route_t *ackPath = new route_t();
+    assert(dataPath->size()>=2);
+    for(int i = dataPath->size()-2; i>=0; i-=2){
+        PacketSink* dualQueue = dataPath->at(i+1)->getDual();
+        PacketSink* dualPipe = dataPath->at(i)->getDual();
+        ackPath->push_back(dualPipe);
+        ackPath->push_back(dualQueue);
+    }
+    ackPath->insert(ackPath->begin(), HostTXQueues[dest]);
+    return ackPath;
 }
 
 pair<Queue *, Queue *> F10Topology::linkToQueues(int linkid) {
