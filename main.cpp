@@ -61,7 +61,7 @@ void exit_error(char *progr) {
 
 int main(int argc, char **argv) {
     clock_t begin = clock();
-    eventlist.setEndtime(timeFromSec(1000.01));
+    eventlist.setEndtime(timeFromSec(5000.01));
 
     double simStartingTime_ms = -1;
     double epsilon = 1;
@@ -90,20 +90,6 @@ int main(int argc, char **argv) {
             failedLinkId = atoi(argv[i + 1]);
             i += 2;
         }
-
-        if(topology == 0){
-            cout<< "Using FatTree Topology"<<endl;
-        }else if(topology == 1){
-            cout<<"Using ShareBackup Toplogy"<<endl;
-        }else{
-            cout<<"Using F10 Topology"<<endl;
-        }
-        if (routing == 0) {
-            cout << "Using ECMP Routing" << endl;
-        } else {
-            cout << "Using Standard Routing" << endl;
-        }
-
 
         traf_file_name = argv[i];
         logfile = new Logfile(filename.str(), eventlist);
@@ -138,13 +124,13 @@ int main(int argc, char **argv) {
         linkFailureEvent->setFailureRecoveryDelay(timeFromMs(GLOBAL_REROUTE_DELAY), timeFromMs(GLOBAL_REROUTE_DELAY));
         if(topology==1){
             linkFailureEvent->UsingShareBackup = true;
-            int* lpBackupUsageTracker = new int[K];
-            int* upBackupUsageTracker = new int[K];
-            int* coreBackupUsageTracker = new int[K/2];
+            vector<int>*lpBackupUsageTracker = new vector<int>(K);
+            vector<int>* upBackupUsageTracker = new vector<int>(K);
+            vector<int>* coreBackupUsageTracker = new vector<int>(K);
             for(int i = 0; i < K; i++){
-                lpBackupUsageTracker[i] = BACKUPS_PER_GROUP;
-                upBackupUsageTracker[i] = BACKUPS_PER_GROUP;
-                coreBackupUsageTracker[i/2] = BACKUPS_PER_GROUP;
+                (*lpBackupUsageTracker)[i] = BACKUPS_PER_GROUP;
+                (*upBackupUsageTracker)[i] = BACKUPS_PER_GROUP;
+                (*coreBackupUsageTracker)[i/2] = BACKUPS_PER_GROUP;
             }
             linkFailureEvent->setFailureRecoveryDelay(timeFromMs(CIRCUIT_SWITCHING_DELAY), 0);
             linkFailureEvent->setBackupUsageTracker(lpBackupUsageTracker,upBackupUsageTracker,coreBackupUsageTracker);
@@ -324,13 +310,26 @@ int main(int argc, char **argv) {
     for (pair<int,FlowConnection*> it: *flowStats) {
         sum += it.second->_duration;
     }
-    cout << "Routing:" << routing << endl;
+
+    if(topology == 0){
+        cout<< "Using FatTree Topology ";
+    }else if(topology == 1){
+        cout<<"Using ShareBackup Toplogy ";
+    }else{
+        cout<<"Using F10 Topology ";
+    }
+    if (routing == 0) {
+        cout << "Using ECMP Routing" << endl;
+    } else {
+        cout << "Using Standard Routing" << endl;
+    }
+    cout<<"LinkFailure:"<<failedLinkId<<endl;
     cout << "finished flows:" << flowStats->size() << " all flows:" << connID << endl;
     cout << "Average coFCT:" << sum / flowStats->size() << endl;
     cout<< "Total TCP timeouts: "<<eventlist.globalTimeOuts<<endl;
-    cout << "PacketLoss Random:"<<eventlist.randomPacketLoss<<" BufferOverflow:"<<eventlist.bufferOverflowPacketDrops
-         <<" linkFailure:"<<eventlist.linkFailurePacketDrops<<" ack:"<<eventlist.ackLinkFailureLoss
-         <<" total:"<< eventlist.getTotalPacketLoss() << endl;
+    //cout << "PacketLoss Random:"<<eventlist.randomPacketLoss<<" BufferOverflow:"<<eventlist.bufferOverflowPacketDrops
+    //     <<" linkFailure:"<<eventlist.linkFailurePacketDrops<<" ack:"<<eventlist.ackLinkFailureLoss
+     //    <<" total:"<< eventlist.getTotalPacketLoss() << endl;
     double temp = linkFailureEvent->getThroughputOfImpactedFlows(flowStats);
     cout<<"average cct of failure flows:"<<temp<<endl;
 }

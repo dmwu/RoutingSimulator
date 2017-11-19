@@ -12,49 +12,52 @@ LinkFailureEvent::LinkFailureEvent(EventList &eventlist, Topology *topo, simtime
         : EventSource(eventlist, "LinkFailureEvent"), _topo(topo), _startFrom(startFrom),
           _failureTime(failureTime), _linkid(linkid) {
     _connections = new vector<FlowConnection *>();
-    init();
 }
 
 LinkFailureEvent::LinkFailureEvent(EventList &eventlist, Topology *topo)
         : EventSource(eventlist, "LinkFailureEvent"), _topo(topo) {
     _connections = new vector<FlowConnection *>();
-    init();
 }
 
 LinkFailureEvent::LinkFailureEvent(EventList &eventList, simtime_picosec startFrom, simtime_picosec failureTime,
                                    int linkid):EventSource(eventList,"LinkFailureEvent"), _startFrom(startFrom),
                                                _failureTime(failureTime), _linkid(linkid) {
     _connections = new vector<FlowConnection*>();
-    init();
 }
 
-void LinkFailureEvent::setBackupUsageTracker(int *lp, int *up, int *core) {
+void LinkFailureEvent::setBackupUsageTracker(vector<int> *lp, vector<int> *up, vector<int> *core) {
     lpBackupUsageTracker = lp;
     upBackupUsageTracker = up;
     coreBackupUsageTracker = core;
+    initTracker();
 }
-void LinkFailureEvent::init() {
+void LinkFailureEvent::initTracker() {
     if(_linkid < 0)
         return;
     pair<Queue*,Queue*> ret = _topo->linkToQueues(_linkid);
     int sid2 = ret.first->_switchId; //upper queue
     int sid1 = ret.second->_switchId;//lower queue
     assert(sid1<=sid2);
-    int gid1 = sid1/(K/2);
-    int gid2 = sid2/(K/2);
     if(sid1 < 0){ //host link failure
-        _group1 = &(lpBackupUsageTracker[gid2]);
-        _group2 = &(lpBackupUsageTracker[gid2]);
+        int gid2 = sid2/(K/2);
+        _group1 = &(lpBackupUsageTracker->at(gid2));
+        _group2 = &(lpBackupUsageTracker->at(gid2));
     }
     else if(sid1<NK) {
+        //lp to up link failure
         assert(sid2 >= NK && sid2 < 2 * NK);
-        _group1 = &(lpBackupUsageTracker[gid1]);
-        _group2 = &(upBackupUsageTracker[gid2]);
+        int gid1 = sid1/(K/2);
+        int gid2 = (sid2 -NK)/(K/2);
+        _group1 = &(lpBackupUsageTracker->at(gid1));
+        _group2 = &(upBackupUsageTracker->at(gid2));
 
     }else{
+        // up to core link failure
         assert(sid1<2*NK && sid2>=2*NK);
-        _group1 = &(upBackupUsageTracker[gid1]);
-        _group2 = &(coreBackupUsageTracker[gid2]);
+        int gid1 = (sid1-NK)/(K/2);
+        int gid2 = (sid2 -2*NK)/(K/2);
+        _group1 = &(upBackupUsageTracker->at(gid1));
+        _group2 = &(coreBackupUsageTracker->at(gid2));
     }
 }
 
@@ -146,6 +149,7 @@ void LinkFailureEvent::rerouting(){
     } else if (_linkStatus == BAD) {
         this->eventlist().sourceIsPending(*this, eventlist().now() + _pathRestoreDelay);
         _linkStatus = WAITING_RECOVER;
+
 
     } else {
         _topo->recoverLink(_linkid);

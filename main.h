@@ -39,7 +39,7 @@
 #define LOCAL_REROUTE_DELAY 2 //ms
 #define GLOBAL_REROUTE_DELAY 30 //ms
 #define CIRCUIT_SWITCHING_DELAY 10 //ms
-#define TCP_TIMEOUT_SCANNER_PERIOD 0.6 //ms
+#define TCP_TIMEOUT_SCANNER_PERIOD 0.7 //ms
 
 #endif
 

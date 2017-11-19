@@ -52,16 +52,16 @@ public:
     vector<FlowConnection*>* _connections;
     void registerConnection(FlowConnection* fc);
     bool isPathOverlapping(route_t*);
-    int* lpBackupUsageTracker;
-    int* upBackupUsageTracker;
-    int* coreBackupUsageTracker;
+    vector<int>* lpBackupUsageTracker;
+    vector<int>* upBackupUsageTracker;
+    vector<int>* coreBackupUsageTracker;
     int* _group1;
     int* _group2;
-    void setBackupUsageTracker(int* lp, int*up, int* core);
+    void setBackupUsageTracker(vector<int>* lp, vector<int>*up, vector<int>* core);
 private:
     void rerouting();
     bool hasEnoughBackup();
-    void init();
+    void initTracker();
     void circuitReconfig();
 };
 
