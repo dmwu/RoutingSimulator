@@ -463,7 +463,7 @@ bool FatTreeTopology::isPathValid(route_t *rt) {
 }
 
 pair<Queue *, Queue *> FatTreeTopology::linkToQueues(int linkid) {
-    pair<Queue *, Queue *> ret(nullptr, nullptr);
+    pair<Queue *, Queue *> ret(NULL, NULL);
     int lower, higher;
     if (linkid < NHOST) {
         lower = linkid;
@@ -486,7 +486,7 @@ pair<Queue *, Queue *> FatTreeTopology::linkToQueues(int linkid) {
         ret.first = queues_nup_nc[lower][higher];
         ret.second = queues_nc_nup[higher][lower];
     }
-    if(ret.first == nullptr || ret.second == nullptr){
+    if(ret.first == NULL || ret.second == NULL){
         cout<<"invalid linkid for failure:"<<linkid<<endl;
         exit(-1);
     }
@@ -531,7 +531,7 @@ pair<route_t *, route_t *> FatTreeTopology::getStandardPath(int src, int dest) {
             return make_pair(path, ackPath);
         }
     }
-    return make_pair(nullptr, nullptr);
+    return make_pair((route_t*)NULL, (route_t*)NULL);
 }
 
 
@@ -555,7 +555,7 @@ pair<route_t*, route_t*> FatTreeTopology::getEcmpPath(int src, int dest) {
             }
         }
     }
-    return make_pair(nullptr, nullptr);
+    return make_pair((route_t*)NULL, (route_t*)NULL);
 
 }
 

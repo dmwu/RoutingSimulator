@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
     double extrastarttime;
 
     TcpRtxTimerScanner tcpRtxScanner(timeFromMs(TCP_TIMEOUT_SCANNER_PERIOD), eventlist); //irregular tcp retransmit timeout
-    Topology *top = nullptr;
+    Topology *top = NULL;
     LinkFailureEvent* linkFailureEvent;
     if(topology<=1) {
         top = new FatTreeTopology(&eventlist);
@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
                 pair<route_t*, route_t*> path;
                 if (routing == 0) {
                     //ecmp
-                    path = top->getReroutingPath(src, dest, nullptr);
+                    path = top->getReroutingPath(src, dest, NULL);
 
                 } else {
                     path = top->getStandardPath(src,dest);

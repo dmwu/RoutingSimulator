@@ -51,7 +51,7 @@ public:
     void handleFlowCompletion();
 
     virtual void rtx_timer_hook(simtime_picosec now, simtime_picosec period);
-    virtual PacketSink* getDual(){perror("no dual for TcpSrc");return nullptr ;}
+    virtual PacketSink* getDual(){perror("no dual for TcpSrc");return NULL ;}
 
 // should really be private, but loggers want to see:
     uint64_t _highest_sent;  //seqno is in bytes
@@ -116,7 +116,7 @@ private:
 
 
     // Housekeeping
-    TcpLogger *_logger= nullptr;
+    TcpLogger *_logger= NULL;
     TrafficLogger *_pktlogger;
     // Connectivity
     PacketFlow _flow;
@@ -141,7 +141,7 @@ class TcpSink : public PacketSink, public DataReceiver, public Logged {
 public:
     TcpSink(EventList* ev);
     TcpSink();
-    EventList* _eventList = nullptr;
+    EventList* _eventList = NULL;
     void receivePacket(Packet &pkt);
 
     inline void joinMultipathConnection(MultipathTcpSink *sink) {

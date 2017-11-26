@@ -159,7 +159,7 @@ void LinkFailureEvent::rerouting(){
                 continue;
             }
             path = _topo->getStandardPath(fc->_src, fc->_dest);
-            if (path.first == nullptr || path.second == nullptr) {
+            if (path.first == NULL || path.second == NULL) {
                 route_t*currentPath = new route_t(fc->_tcpSrc->_route->begin(), fc->_tcpSrc->_route->end()-1);
                 path = _topo->getReroutingPath(fc->_src, fc->_dest, currentPath);
                 currentPath->clear();

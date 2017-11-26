@@ -58,7 +58,7 @@ public:
 
     virtual void recoverLink(int linkid);
 
-    virtual pair<route_t *, route_t *> getReroutingPath(int src, int dest, route_t* currentPath= nullptr);
+    virtual pair<route_t *, route_t *> getReroutingPath(int src, int dest, route_t* currentPath= NULL);
 
     virtual pair<route_t*, route_t*> getEcmpPath(int src, int dest);
 
