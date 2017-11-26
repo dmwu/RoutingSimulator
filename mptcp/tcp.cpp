@@ -62,7 +62,7 @@ TcpSrc::TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventlist
 
 
 TcpSrc::TcpSrc(int src, int dest, EventList &eventlist, uint64_t volume, double startTime_ms, int super_id, int coflowId,
-               map<int, FlowConnection *> *flowStats) : EventSource(eventlist, "tcp"), _flow(NULL), _logger(nullptr) {
+               map<int, FlowConnection *> *flowStats) : EventSource(eventlist, "tcp"), _flow(NULL), _logger(NULL) {
     _mss = TcpPacket::DEFAULTDATASIZE;
     _maxcwnd = 0xffffffff;//MAX_SENT*_mss;
     _sawtooth = 0;
