@@ -349,7 +349,7 @@ route_t *F10Topology::get_path_2levelrt(int src, int dest) {
 
 
 route_t *F10Topology::getAlternativePath(int src, int dest, route_t *dataPath) {
-    route_t* routeout= NULL;
+    route_t* routeout= nullptr;
     int failurePos = -1;
     for (int i = 0; i < dataPath->size(); i++) {
         PacketSink *t = dataPath->at(i);
@@ -360,7 +360,7 @@ route_t *F10Topology::getAlternativePath(int src, int dest, route_t *dataPath) {
     }
     if (failurePos <= 2 || failurePos >= dataPath->size() - 2) {
         //host link failures, no alternative
-        return NULL;
+        return nullptr;
     }
 
     PacketSink *ff = dataPath->at(failurePos);
@@ -453,7 +453,7 @@ route_t *F10Topology::getAlternativePath(int src, int dest, route_t *dataPath) {
         }
     } else {
         //upward link failure
-        if (_net_paths[src][dest] == NULL)
+        if (_net_paths[src][dest] == nullptr)
             _net_paths[src][dest] = get_paths_ecmp(src, dest);
         for (route_t *path: *_net_paths[src][dest]) {
             if (isPathValid(path)) {
@@ -462,7 +462,7 @@ route_t *F10Topology::getAlternativePath(int src, int dest, route_t *dataPath) {
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 pair<route_t *, route_t *> F10Topology::getStandardPath(int src, int dest) {
@@ -474,7 +474,7 @@ pair<route_t *, route_t *> F10Topology::getStandardPath(int src, int dest) {
             return make_pair(path, ackPath);
         }
     }
-    return make_pair((route_t*)NULL, (route_t*)NULL);
+    return make_pair(nullptr, nullptr);
 
 }
 
@@ -490,7 +490,7 @@ pair<route_t *, route_t *> F10Topology::getReroutingPath(int src, int dest, rout
         }
     }
 
-    return make_pair((route_t*)NULL, (route_t*)NULL);
+    return make_pair(nullptr, nullptr);
 
 }
 
@@ -509,7 +509,7 @@ pair<route_t*, route_t*> F10Topology::getEcmpPath(int src, int dest) {
             }
         }
     }
-    return make_pair((route_t*)NULL, (route_t*)NULL);
+    return make_pair(nullptr, nullptr);
 }
 
 route_t* F10Topology::getReversePath(int src, int dest, route_t *dataPath) {
@@ -526,7 +526,7 @@ route_t* F10Topology::getReversePath(int src, int dest, route_t *dataPath) {
 }
 
 pair<Queue *, Queue *> F10Topology::linkToQueues(int linkid) {
-    pair<Queue *, Queue *> ret(NULL, NULL);
+    pair<Queue *, Queue *> ret(nullptr, nullptr);
     int lower, higher;
     if (linkid < NHOST) {
         lower = linkid;
@@ -554,7 +554,7 @@ pair<Queue *, Queue *> F10Topology::linkToQueues(int linkid) {
         ret.first = queues_nup_nc[lower][higher];
         ret.second = queues_nc_nup[higher][lower];
     }
-    if(ret.first == NULL || ret.second == NULL){
+    if(ret.first == nullptr || ret.second == nullptr){
         std::cout<<"invalid linkid for failure:"<<linkid<<endl;
         exit(-1);
     }
