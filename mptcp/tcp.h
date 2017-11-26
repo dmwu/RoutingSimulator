@@ -168,7 +168,7 @@ public:
     TcpSrc *_src;
 
     void replace_route(route_t *newroute);
-    virtual PacketSink* getDual(){perror("no dual for TcpSink");return nullptr;}
+    virtual PacketSink* getDual(){perror("no dual for TcpSink");return NULL;}
 
 private:
     // Connectivity
