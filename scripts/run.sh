@@ -10,7 +10,7 @@ for top in 0 1 2
             do
             fileName="top_"$top"_link_"$failLink"_trial_"$trial".txt"
             echo $fileName
-            ./main -o log  -topo "$top" -routing 1 -failLink "$failLink" ../trafficTraces/fb_10min_1 > "top_"$top"_link_"$failLink"_trial_"$trail".txt"
+            ./main -o log  -topo "$top" -routing 1 -failLink "$failLink" ../trafficTraces/fb_10min_1 > $fileName
         done
     done
 done
