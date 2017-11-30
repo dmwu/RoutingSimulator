@@ -8,10 +8,16 @@
 F10Topology::F10Topology(EventList *ev) {
     _eventlist = ev;
     _numLinks = K * K * K / 2 + NHOST; //[WDM] should include host links
+    _numSwitches = NK + NK + NK/2;
 
     _failedLinks = new bool[_numLinks];
+    _failedSwitches = new bool[_numSwitches];
     for (int i = 0; i < _numLinks; i++) {
         _failedLinks[i] = false;
+    }
+
+    for(int i = 0; i < _numSwitches;i++){
+        _failedSwitches[i] = false;
     }
 
     _net_paths = new vector<route_t *> **[NHOST];
@@ -280,7 +286,7 @@ route_t *F10Topology::get_path_2levelrt(int src, int dest) {
     } else if (HOST_POD(src) == HOST_POD(dest)) {
         int pod = HOST_POD(src);
         int srcHostID = src % (K / 2);
-        int destHostID = dest % (K / 2);
+        //int destHostID = dest % (K / 2);
         int aggSwitchID = MIN_POD_ID(pod) + srcHostID;
 
         routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
@@ -468,13 +474,9 @@ route_t *F10Topology::getAlternativePath(int src, int dest, route_t *dataPath) {
 pair<route_t *, route_t *> F10Topology::getStandardPath(int src, int dest) {
 
     route_t *path = get_path_2levelrt(src, dest);
-    if (isPathValid(path)) {
-        route_t *ackPath = getReversePath(src,dest,path);
-        if (isPathValid(ackPath)) {
-            return make_pair(path, ackPath);
-        }
-    }
-    return make_pair(nullptr, nullptr);
+    route_t *ackPath = getReversePath(src,dest,path);
+    return make_pair(path, ackPath);
+
 
 }
 
@@ -483,18 +485,25 @@ pair<route_t *, route_t *> F10Topology::getReroutingPath(int src, int dest, rout
         _net_paths[src][dest] = get_paths_ecmp(src, dest);
     }
     route_t* path = getAlternativePath(src, dest, currentPath);
-    if (isPathValid(path)) {
-        route_t *ackPath = getReversePath(src, dest, path);
-        if (isPathValid(ackPath)) {
-            return make_pair(path, ackPath);
-        }
-    }
+    route_t *ackPath = getReversePath(src, dest, path);
+    return make_pair(path, ackPath);
 
-    return make_pair(nullptr, nullptr);
 
 }
 
 pair<route_t*, route_t*> F10Topology::getEcmpPath(int src, int dest) {
+    if (_net_paths[src][dest] == NULL) {
+        _net_paths[src][dest] = get_paths_ecmp(src, dest);
+    }
+    vector<route_t *> *paths = _net_paths[src][dest];
+    unsigned rnd = rand()%paths->size();
+    route_t* path = paths->at(rnd);
+    route_t* ackPath = getReversePath(src, dest, path);
+    return make_pair(path, ackPath);
+
+}
+
+pair<route_t*, route_t*> F10Topology::getOneWorkingEcmpPath(int src, int dest) {
     if (_net_paths[src][dest] == NULL) {
         _net_paths[src][dest] = get_paths_ecmp(src, dest);
     }
@@ -512,7 +521,12 @@ pair<route_t*, route_t*> F10Topology::getEcmpPath(int src, int dest) {
     return make_pair(nullptr, nullptr);
 }
 
+
+
 route_t* F10Topology::getReversePath(int src, int dest, route_t *dataPath) {
+    if(!isPathValid(dataPath)){
+        return nullptr;
+    }
     route_t *ackPath = new route_t();
     assert(dataPath->size()>=2);
     for(int i = dataPath->size()-2; i>=0; i-=2){
@@ -534,7 +548,7 @@ pair<Queue *, Queue *> F10Topology::linkToQueues(int linkid) {
         ret.first = queues_ns_nlp[lower][higher];
         ret.second = HostRecvQueues[lower];
         return ret;
-    } else if (linkid >= NHOST && linkid < 2 * NHOST) {
+    } else if (linkid >= NHOST && linkid < NHOST+ NK*K/2) {
         linkid -= NHOST;
         lower = linkid / (K / 2);
         higher = MIN_POD_ID(lower/(K/2)) + linkid % (K / 2);
@@ -542,8 +556,8 @@ pair<Queue *, Queue *> F10Topology::linkToQueues(int linkid) {
         ret.second = queues_nup_nlp[higher][lower];
 
     } else {
-        assert(linkid >= 2 * NHOST && linkid < 3 * NHOST);
-        linkid -= 2 * NHOST;
+        assert(linkid >= NHOST+ NK*K/2 && linkid < NHOST + NK*K);
+        linkid -=  (NHOST+NK*K/2);
         lower = linkid / (K / 2);
         int pod = linkid / (K * K / 4);
         if (pod % 2 == 0)
@@ -623,13 +637,81 @@ int F10Topology::nodePair_to_link(int node1, int node2) {
 }
 
 bool F10Topology::isPathValid(route_t *rt) {
-    if (rt == NULL) return false;
+
+    if (rt == nullptr||rt->size()<2)
+            return false;
+
     for (int i = 0; i < rt->size(); i += 2) {
         if (rt->at(i)->_disabled) {
             return false;
         }
     }
     return true;
+}
+
+void F10Topology::failSwitch(int sid) {
+    vector<int>* links = getLinksFromSwitch(sid);
+    for(int link:*links){
+        failLink(link);
+    }
+}
+
+void F10Topology::recoverSwitch(int sid) {
+    vector<int>* links = getLinksFromSwitch(sid);
+    for(int link:*links){
+        recoverLink(link);
+    }
+}
+
+vector<int>* F10Topology::getLinksFromSwitch(int sid) {
+    vector<int>* ret = new vector<int>();
+    if(_failedSwitches[sid])
+        return ret;
+    if (sid< NK) {
+        //down-facing links
+        for (int i = 0; i < (K/2)*RATIO; i++) {
+            int linkId = sid*(K/2)*RATIO +i;
+            ret->push_back(linkId);
+        }
+
+        //upfacing links
+        for (int i = 0; i < (K/2); i++) {
+            int linkId = NHOST+ sid * (K/2) + i;
+            ret->push_back(linkId);
+        }
+    }
+    else if(sid>=NK && sid <2*NK){
+        //down-facing links
+        int linkOffset = sid%(K/2);
+        int podId = (sid-NK)/(K/2);
+        for(int lp = MIN_POD_ID(podId); lp <= MAX_POD_ID(podId); lp++){
+            int linkId = lp*K/2 + linkOffset + NHOST;
+            ret->push_back(linkId);
+        }
+
+        //upfacing links
+        for(int i = 0; i < K/2; i++){
+            int linkId = NHOST+ sid*K/2 +i;
+            ret->push_back(linkId);
+        }
+
+    }else{
+        int coreGroup = (sid-2*NK)/(K/2);
+        int inGroupOffset = (sid-2*NK)%(K/2);
+        for(int pod = 0; pod < K; pod++){
+            int aggId = -1, linkId = -1;
+            if(pod%2==0) {
+                aggId = NK+ pod * K / 2 + coreGroup;
+                linkId = aggId * K / 2 + inGroupOffset +NHOST;
+            }
+            else {
+                aggId = NK+ pod * K / 2 + inGroupOffset;
+                linkId = aggId*K/2 + coreGroup + NHOST;
+            }
+            ret->push_back(linkId);
+        }
+    }
+    return ret;
 }
 
 

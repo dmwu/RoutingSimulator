@@ -27,4 +27,6 @@ add_subdirectory(${SOURCE_FILES_F10})
 add_subdirectory(${SOURCE_FILES_MPTCP})
 
 add_executable(main main.cpp)
+add_executable(main_MultipleSteadyLinkFailures main_MultipleSteadyLinkFailures.cpp)
 target_link_libraries (main LINK_PUBLIC mptcp f10 fattree)
+target_link_libraries (main_MultipleSteadyLinkFailures LINK_PUBLIC mptcp f10 fattree)

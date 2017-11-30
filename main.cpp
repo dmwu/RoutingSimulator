@@ -5,7 +5,9 @@
 #include <unistd.h>
 #include <list>
 #include <math.h>
-#include "LinkFailureEvent.h"
+#include <set>
+#include <MultipleSteadyLinkFailures.h>
+#include "SingleDynamicLinkFailureEvent.h"
 #include "network.h"
 #include "randomqueue.h"
 #include "pipe.h"
@@ -43,16 +45,26 @@
 
 int N = NSW;
 
-string ntoa(double n);
+map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats){
+    map<int, double>* cct = new map<int, double>();
+    for(pair<int,FlowConnection*> it: *flowStats){
+        int cid = it.second->_coflowId;
+        int duration = it.second->_duration;
+        if(cct->count(cid)==0 || cct->at(cid) < duration)
+            (*cct)[cid] = duration;
+    }
+    return cct;
+}
 
-string itoa(uint64_t n);
-
-bool isRouteValid(route_t *rt);
-
+string getCCTFileName(int topology, int routing, int link, string trace){
+    stringstream file;
+    file<<"top"<<itoa(topology) <<"rtng"<<itoa(routing)<<"K"<< K <<"links"<<itoa(link)<<trace<<".txt";
+    return file.str();
+}
 EventList eventlist;
 
 Logfile *lg;
-
+map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats);
 void exit_error(char *progr) {
     cout << "Usage " << progr
          << " [UNCOUPLED(DEFAULT)|COUPLED_INC|FULLY_COUPLED|COUPLED_EPSILON] [epsilon][COUPLED_SCALABLE_TCP" << endl;
@@ -61,23 +73,22 @@ void exit_error(char *progr) {
 
 int main(int argc, char **argv) {
     clock_t begin = clock();
+    int totalFlows = 0;
     eventlist.setEndtime(timeFromSec(2000.01));
+    set<int>* impactedCoflow = new set<int>();
+    set<int>* impactedFlow = new set<int>();
+    set<int>* deadCoflow = new set<int>();
+    set<int>* deadFlow = new set<int>();
 
     double simStartingTime_ms = -1;
     double epsilon = 1;
-    int routing = 1; //[WDM] 0 stands for ecmp; 1 stands for two-level routing
+    int routing = 0; //[WDM] 0 stands for ecmp; 1 stands for two-level routing
     int topology = 0; // 0 stands for fattree; 1 stands for sharebackup; 2 stands for f10
     int failedLinkId = -1;
-    stringstream filename(ios_base::out);
     string traf_file_name;
-    Logfile *logfile;
+    int steadyOnly = 0;
     if (argc > 1) {
         int i = 1;
-        if (!strcmp(argv[1], "-o")) {
-            filename << argv[2];
-            i += 2;
-        } else
-            filename << "logout.dat";
         if (argc > i && !strcmp(argv[i], "-topo")) {
             topology = atoi(argv[i + 1]);
             i += 2;
@@ -86,20 +97,23 @@ int main(int argc, char **argv) {
             routing = atoi(argv[i + 1]);
             i += 2;
         }
-        if (argc > i && !strcmp(argv[i], "-failLink")) {
+        if (argc > i && !strcmp(argv[i], "-failLinkId")) {
             failedLinkId = atoi(argv[i + 1]);
             i += 2;
         }
 
+        if (argc > i && !strcmp(argv[i], "-steadyFailure")) {
+            steadyOnly= atoi(argv[i + 1]);
+            i += 2;
+        }
         traf_file_name = argv[i];
-        logfile = new Logfile(filename.str(), eventlist);
     } else {
         cout << "wrong arguments!" << endl;
         exit(1);
     }
 
 #if PRINT_PATHS
-    filename << ".paths";
+    filename << "logs.paths";
     std::ofstream pathFile(filename.str().c_str());
     if (!pathFile) {
         cout << "Can't open for writing paths file!" << endl;
@@ -117,34 +131,32 @@ int main(int argc, char **argv) {
 
     TcpRtxTimerScanner tcpRtxScanner(timeFromMs(TCP_TIMEOUT_SCANNER_PERIOD), eventlist); //irregular tcp retransmit timeout
     Topology *top = NULL;
-    LinkFailureEvent* linkFailureEvent;
-    if(topology<=1) {
+
+    SingleDynamicLinkFailureEvent *linkFailureEvent;
+    if (topology <= 1) {
         top = new FatTreeTopology(&eventlist);
-        linkFailureEvent = new LinkFailureEvent(eventlist, top, timeFromSec(100), timeFromSec(300), failedLinkId);
-        linkFailureEvent->setFailureRecoveryDelay(timeFromMs(GLOBAL_REROUTE_DELAY), timeFromMs(GLOBAL_REROUTE_DELAY));
-        if(topology==1){
+        linkFailureEvent = new SingleDynamicLinkFailureEvent(eventlist, top, timeFromSec(0), timeFromSec(300),
+                                                             failedLinkId);
+        linkFailureEvent->setFailureRecoveryDelay(timeFromMs(GLOBAL_REROUTE_DELAY),
+                                                  timeFromMs(GLOBAL_REROUTE_DELAY));
+        if (topology == 1) {
             linkFailureEvent->UsingShareBackup = true;
-            vector<int>*lpBackupUsageTracker = new vector<int>(K);
-            vector<int>* upBackupUsageTracker = new vector<int>(K);
-            vector<int>* coreBackupUsageTracker = new vector<int>(K);
-            for(int i = 0; i < K; i++){
-                (*lpBackupUsageTracker)[i] = BACKUPS_PER_GROUP;
-                (*upBackupUsageTracker)[i] = BACKUPS_PER_GROUP;
-                (*coreBackupUsageTracker)[i/2] = BACKUPS_PER_GROUP;
-            }
+            vector<int> *lpBackupUsageTracker = new vector<int>(K,BACKUPS_PER_GROUP);
+            vector<int> *upBackupUsageTracker = new vector<int>(K,BACKUPS_PER_GROUP);
+            vector<int> *coreBackupUsageTracker = new vector<int>(K/2, BACKUPS_PER_GROUP);
             linkFailureEvent->setFailureRecoveryDelay(timeFromMs(CIRCUIT_SWITCHING_DELAY), 0);
-            linkFailureEvent->setBackupUsageTracker(lpBackupUsageTracker,upBackupUsageTracker,coreBackupUsageTracker);
+            linkFailureEvent->setBackupUsageTracker(lpBackupUsageTracker, upBackupUsageTracker,
+                                                    coreBackupUsageTracker);
         }
-    }
-    else {
+    } else {
         top = new F10Topology(&eventlist);
-        linkFailureEvent = new LinkFailureEvent(eventlist, top, timeFromSec(50), timeFromSec(500), failedLinkId);
+        linkFailureEvent = new SingleDynamicLinkFailureEvent(eventlist, top, timeFromSec(0), timeFromSec(300),
+                                                             failedLinkId);
         linkFailureEvent->setFailureRecoveryDelay(timeFromMs(LOCAL_REROUTE_DELAY), timeFromMs(LOCAL_REROUTE_DELAY));
     }
 
 
-
-    int connID = 0, subFlowID;
+    int flowId = 0;
     char file_name[1024];
     strcpy(file_name, traf_file_name.c_str());
 
@@ -170,16 +182,17 @@ int main(int argc, char **argv) {
 
     vector<uint64_t *> flows_sent;
     vector<uint64_t *> flows_recv;
-    vector<bool *> flows_finish;
+    vector<bool*> flows_finish;
     map<int,FlowConnection*>* flowStats = new map<int, FlowConnection*>();
 
     int src, dest;
     route_t *path = NULL;
     srand(time(NULL));
+    string cctFilename = getCCTFileName(topology,routing,failedLinkId,traf_file_name);
     while (getline(traf_file, line)) {
         int i = 0;
         int pos = line.find(" ");
-        string coflow_id = line.substr(0, pos);
+        int coflow_id = atoi(line.substr(0, pos).c_str());
         i = ++pos;
         pos = line.find(" ", pos);
         string str = line.substr(i, pos - i);
@@ -194,7 +207,6 @@ int main(int argc, char **argv) {
         str = line.substr(i, pos - i);
         int mapper_n = atoi(str.c_str());
         vector<int> mappers;
-        subFlowID=0;
         for (int k = 0; k < mapper_n; k++) {
             i = ++pos;
             pos = line.find(" ", pos);
@@ -209,8 +221,8 @@ int main(int argc, char **argv) {
         pos = line.find(" ", pos);
         str = line.substr(i, pos - i);
         int reducer_n = atoi(str.c_str());
-        bool coflowHasPath = true;
-        for (int k = 0; k < reducer_n && coflowHasPath; k++) {
+        totalFlows += mapper_n*reducer_n;
+        for (int k = 0; k < reducer_n; k++) {
             i = ++pos;
             pos = line.find(" ", pos);
             if (pos == string::npos)
@@ -233,26 +245,32 @@ int main(int argc, char **argv) {
                 pair<route_t*, route_t*> path;
                 if (routing == 0) {
                     //ecmp
-                    path = top->getReroutingPath(src, dest, NULL);
+                    path = top->getEcmpPath(src, dest);
 
                 } else {
                     path = top->getStandardPath(src,dest);
                 }
 
-                if (path.first == NULL || path.second == NULL) {
-                    cout << "[ERROR] coflow:" << coflow_id << " cannot find a valid path for flow:" << src << "->"
-                         << dest << endl;
-                    coflowHasPath = false;
-                    break;
+                if (!top->isPathValid(path.first) || !top->isPathValid(path.second)) {
+                    impactedFlow->insert(flowId);
+                    impactedCoflow->insert(coflow_id);
+                    route_t* curPath = path.first;
+                    path = top->getReroutingPath(src, dest, curPath);
 
+                    if(!top->isPathValid(path.first) || !top->isPathValid(path.second)){
+                        cout<<"no path available for:"<<src<<"->"<<dest<<endl;
+                        deadCoflow->insert(coflow_id);
+                        deadFlow->insert(flowId);
+                        flowId++;
+                        continue;
+                    }
                 }
-                tcpSrc = new TcpSrc(src, dest, eventlist, volume_bytes, arrivalTime_ms, connID,
-                                    atoi(coflow_id.c_str()), flowStats);
-                connID++;
-                subFlowID++;
+                tcpSrc = new TcpSrc(src, dest, eventlist, volume_bytes, arrivalTime_ms, flowId,
+                                    coflow_id, flowStats);
+                flowId++;
                 tcpSnk = new TcpSink(&eventlist);
                 // yiting
-                tcpSnk->set_super_id(connID);
+                tcpSnk->set_super_id(flowId);
 
                 tcpSrc->setName("mtcp_" + ntoa(src) + "_" + ntoa(0) + "_" + ntoa(dest) + "(" +
                                 ntoa(0) + ")");
@@ -281,19 +299,12 @@ int main(int argc, char **argv) {
                 }
 
                 tcpSrc->connect(*routeout, *routein, *tcpSnk, timeFromMs(arrivalTime_ms));
-                path.first->clear();
-                path.second->clear();
-
-#ifdef PACKET_SCATTER
-                tcpSrc->set_paths(net_paths[src][dest]);
-                cout << "Using PACKET SCATTER!!!!"<<endl<<end;
-#endif
 
             }
         }
     }
 
-    cout << "Total Number of TCP flows:" << connID << endl;
+    cout << "Total Number of TCP flows:" << flowId << endl;
     tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     if(failedLinkId >=0 && failedLinkId < 3*K*K*K/4) {
         linkFailureEvent->installEvent();
@@ -302,12 +313,16 @@ int main(int argc, char **argv) {
     while (eventlist.doNextEvent()) {
 
     }
-    double elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
-    cout << "Elapsed:" << elapsed_secs << "s" << endl;
-    double sum = 0;
+    double fsum = 0,csum = 0;
 
     for (pair<int,FlowConnection*> it: *flowStats) {
-        sum += it.second->_duration;
+        fsum += it.second->_duration;
+    }
+    map<int, double>* cct = getCoflowStats(flowStats);
+
+    for(pair<int,double> it:*cct){
+        if(deadCoflow->count(it.first)==0)
+            csum += it.second;
     }
 
     if(topology == 0){
@@ -322,15 +337,13 @@ int main(int argc, char **argv) {
     } else {
         cout << "Using Standard Routing" << endl;
     }
-    cout<<"LinkFailure:"<<failedLinkId<<endl;
-    cout << "finished flows:" << flowStats->size() << " all flows:" << connID << endl;
-    cout << "Average coFCT:" << sum / flowStats->size() << endl;
-    cout<< "Total TCP timeouts: "<<eventlist.globalTimeOuts<<endl;
-    //cout << "PacketLoss Random:"<<eventlist.randomPacketLoss<<" BufferOverflow:"<<eventlist.bufferOverflowPacketDrops
-    //     <<" linkFailure:"<<eventlist.linkFailurePacketDrops<<" ack:"<<eventlist.ackLinkFailureLoss
-     //    <<" total:"<< eventlist.getTotalPacketLoss() << endl;
-    double temp = linkFailureEvent->getThroughputOfImpactedFlows(flowStats);
-    cout<<"average cct of failure flows:"<<temp<<endl;
+    cout << "Finished flows:" << flowStats->size() << " all flows:" << totalFlows << endl;
+    cout<<"Finished coflows:"<<cct->size()<<" all coflows:"<<coflowNum<<endl;
+    cout <<"Average FCT:" << fsum / flowStats->size() << endl;
+    cout <<"Average CCT:"<<csum/cct->size()<<endl;
+    cout<<"Num of Impacted Flows:"<<impactedFlow->size()<<endl;
+    cout<< "Num of Impacted Coflows:"<<impactedCoflow->size()<<endl;
+
+    double elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
+    cout << "Elapsed:" << elapsed_secs << "s" << endl;
 }
-
-

@@ -1,7 +1,7 @@
 #include "tcp.h"
 #include "mtcp.h"
 #include "topology.h"
-#include "LinkFailureEvent.h"
+#include "SingleDynamicLinkFailureEvent.h"
 #include <iostream>
 
 ////////////////////////////////////////////////////////////////
@@ -62,7 +62,7 @@ TcpSrc::TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventlist
 
 
 TcpSrc::TcpSrc(int src, int dest, EventList &eventlist, uint64_t volume, double startTime_ms, int super_id, int coflowId,
-               map<int, FlowConnection *> *flowStats) : EventSource(eventlist, "tcp"), _flow(NULL), _logger(NULL) {
+               map<int, FlowConnection *> *flowStats) : EventSource(eventlist, "tcp"), _logger(NULL),_flow(NULL) {
     _mss = TcpPacket::DEFAULTDATASIZE;
     _maxcwnd = 0xffffffff;//MAX_SENT*_mss;
     _sawtooth = 0;
@@ -177,7 +177,7 @@ TcpSrc::receivePacket(Packet &pkt) {
     p->free();
 
     if (seqno < _last_acked) {
-        cout << "O seqno" << seqno << " last acked " << _last_acked;
+        cout << "seqno " << seqno << " last acked " << _last_acked;
         return;
     }
 
@@ -526,7 +526,7 @@ void TcpSrc::doNextEvent() {
 ////////////////////////////////////////////////////////////////
 
 TcpSink::TcpSink(EventList *ev)
-        : Logged("sink"), _cumulative_ack(0), _packets(0), _eventList(ev) {
+        : Logged("sink"), _eventList(ev),_cumulative_ack(0), _packets(0) {
 
 }
 
@@ -626,12 +626,18 @@ TcpRtxTimerScanner::registerTcp(TcpSrc &tcpsrc) {
 void
 TcpRtxTimerScanner::doNextEvent() {
     simtime_picosec now = eventlist().now();
-    tcps_t::iterator i;
-    for (i = _tcps.begin(); i != _tcps.end(); i++) {
-        if(!(*i)->_flow_finish)
-        (*i)->rtx_timer_hook(now, _scanPeriod);
+    tcps_t::iterator i = _tcps.begin();
+    while( i != _tcps.end()) {
+        if(!(*i)->_flow_finish) {
+            (*i)->rtx_timer_hook(now, _scanPeriod);
+            i++;
+        }
+        else{
+            _tcps.erase(i++);
+        }
     }
-    eventlist().sourceIsPendingRel(*this, _scanPeriod);
+    if(_tcps.size()>0)
+        eventlist().sourceIsPendingRel(*this, _scanPeriod);
 }
 
 void TcpSrc::handleFlowCompletion() {
@@ -639,15 +645,16 @@ void TcpSrc::handleFlowCompletion() {
     double duration_ms = (eventlist().now() / 1e9) - _flow_start_time_ms;
     double endToEndLossRate = (_packets_sent - _sink->_packets) * 1.0 / _packets_sent;
     double rate = (_flow_volume_bytes / 1e6) * 8 / (duration_ms / 1e3); //in Mbps
-//    cout << "coflow:" << _coflowID << " " << (*_route)[0]->_gid << "->" << (*_route)[_route->size() - 2]->_gid
-//         << " flowSize:" << _flow_volume_bytes << " sid:" <<
-//         _super_id << " compTime(ms):" << duration_ms << " now(ms):"
-//         << (double) eventlist().now() / 1e9 << " rate(Mbps):" << rate << " e2eLossRate:" << endToEndLossRate
-//         << " rtx_rto:" << _retransmitCountTimeOut << " rtx_fast:" << _retransmitCountFastRecover << endl;
+    cout << "coflow:" << _coflowID << " " << (*_route)[0]->_gid << "->" << (*_route)[_route->size() - 2]->_gid
+         << " flowSize:" << _flow_volume_bytes << " superId:" <<
+         _super_id << " compTime(ms):" << duration_ms << " rate(Mbps):" << rate << " e2eLossRate:" << endToEndLossRate
+         << " rtx_rto:" << _retransmitCountTimeOut << " rtx_fast:" << _retransmitCountFastRecover << endl;
     FlowConnection *fc = new FlowConnection(this, (TcpSink *) _route->back(), _super_id, _src, _dest,
                                             _flow_volume_bytes, _flow_start_time_ms);
-    fc->_completionTimeMs = eventlist().now();
+    fc->_completionTimeMs = eventlist().now()/1e9;
     fc->_duration = duration_ms;
+    fc->_throughput=rate;
+    fc->_coflowId = _coflowID;
     _flowStats->insert(pair<int, FlowConnection *>(_super_id, fc));
     //Topology::printPath(cout, _route);
 }

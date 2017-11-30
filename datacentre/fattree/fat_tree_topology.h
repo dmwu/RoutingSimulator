@@ -35,8 +35,9 @@ public:
     EventList *_eventlist;
 
     bool *_failedLinks;
+    bool *_failedSwitches;
     int _numLinks;
-
+    int _numSwitches;
     FatTreeTopology(EventList *ev);
 
     virtual void init_network();
@@ -56,23 +57,27 @@ public:
 
     virtual void failLink(int linkid);
 
+    virtual void failSwitch(int sid);
+
     virtual void recoverLink(int linkid);
+
+    virtual void recoverSwitch(int sid);
 
     virtual pair<route_t *, route_t *> getReroutingPath(int src, int dest, route_t* currentPath= nullptr);
 
-    virtual pair<route_t*, route_t*> getEcmpPath(int src, int dest);
-
     virtual pair<route_t *, route_t *> getStandardPath(int src, int dest);
+
+    virtual pair<route_t*, route_t*> getEcmpPath(int src, int dest);
 
     virtual vector<int> *get_neighbours(int src) { return NULL; };
 
     virtual pair<Queue *, Queue *> linkToQueues(int linkid);
 
+    virtual bool isPathValid(route_t *path);
 
 protected:
     map<RandomQueue *, int> _link_usage;
-
-
+    virtual pair<route_t*, route_t*> getOneWorkingEcmpPath(int src, int dest);
     vector<route_t *> ***_net_paths;
 
     int find_lp_switch(RandomQueue *queue);
@@ -87,10 +92,9 @@ protected:
 
     route_t *get_path_2levelrt(int src, int dest);
 
-    bool isPathValid(route_t *path);
     route_t* getReversePath(int src, int dest, route_t*dataPath);
 
-
+    vector<int>* getLinksFromSwitch(int sid);
 };
 
 #endif

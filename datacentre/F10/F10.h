@@ -42,6 +42,8 @@ public:
 
     bool *_failedLinks;
     int _numLinks;
+    int _numSwitches;
+    bool* _failedSwitches;
 
     virtual void init_network();
 
@@ -55,6 +57,10 @@ public:
 
     virtual void recoverLink(int linkid);
 
+    virtual void failSwitch(int linkid);
+
+    virtual void recoverSwitch(int sid);
+
     virtual pair<route_t *, route_t *> getReroutingPath(int src, int dest, route_t*);
 
     virtual pair<route_t*, route_t*> getStandardPath(int src, int dest);
@@ -64,9 +70,11 @@ public:
 
     virtual pair<Queue *, Queue *> linkToQueues(int linkid);
 
+    virtual bool isPathValid(route_t *path);
 
 protected:
 
+    virtual pair<route_t*, route_t*> getOneWorkingEcmpPath(int src, int dest);
     vector<route_t *> ***_net_paths;
 
     vector<route_t *> *get_paths_ecmp(int src, int dest);
@@ -75,11 +83,9 @@ protected:
 
     route_t *get_path_2levelrt(int src, int dest);
 
-    bool isPathValid(route_t *path);
-
     route_t* getReversePath(int src, int dest, route_t*dataPath);
 
-
+    vector<int>* getLinksFromSwitch(int sid);
 };
 
 

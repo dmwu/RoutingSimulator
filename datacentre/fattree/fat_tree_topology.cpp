@@ -11,12 +11,16 @@ extern int N;
 FatTreeTopology::FatTreeTopology(EventList *ev) {
     _eventlist = ev;
     _numLinks = K * K * K / 2 + NHOST; //[WDM] should include host links
-
+    _numSwitches = NK + NK + NK / 2;
+    _failedSwitches = new bool[_numSwitches];
     _failedLinks = new bool[_numLinks];
     for (int i = 0; i < _numLinks; i++) {
         _failedLinks[i] = false;
     }
 
+    for (int i = 0; i < _numSwitches; i++) {
+        _failedSwitches[i] = false;
+    }
     _net_paths = new vector<route_t *> **[NHOST];
 
     for (int i = 0; i < NHOST; i++) {
@@ -37,13 +41,13 @@ void FatTreeTopology::init_network() {
                                           memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
                                           *_eventlist, NULL, memFromPkt(RANDOM_BUFFER),
                                           "TxQueue:" + ntoa(i), -1);
-        HostTXQueues[i]->_isHostQueue=true;
+        HostTXQueues[i]->_isHostQueue = true;
 
         HostRecvQueues[i] = new RandomQueue(speedFromPktps(HOST_NIC),
                                             memFromPkt(FEEDER_BUFFER + RANDOM_BUFFER),
                                             *_eventlist, NULL, memFromPkt(RANDOM_BUFFER),
                                             "RxQueue:" + ntoa(i), -1);
-        HostRecvQueues[i]->_isHostQueue=true;
+        HostRecvQueues[i]->_isHostQueue = true;
     }
 
     for (int j = 0; j < NC; j++)
@@ -84,7 +88,7 @@ void FatTreeTopology::init_network() {
             queues_ns_nlp[k][j] = new RandomQueue(speedFromPktps(HOST_NIC),
                                                   memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER),
                                                   *_eventlist, queueLogger, memFromPkt(RANDOM_BUFFER),
-                                                  "Queue-host-lp-" + ntoa(k)+"-"+ntoa(j), j);
+                                                  "Queue-host-lp-" + ntoa(k) + "-" + ntoa(j), j);
 
             pipes_ns_nlp[k][j] = new Pipe(timeFromUs(RTT), *_eventlist,
                                           "Pipe-host-lp-" + ntoa(k) + "-" + ntoa(j));
@@ -116,7 +120,7 @@ void FatTreeTopology::init_network() {
                                                    memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER),
                                                    *_eventlist, queueLogger,
                                                    memFromPkt(RANDOM_BUFFER),
-                                                   "Queue-lp-up-" + ntoa(j) + "-" +ntoa(k), k+NK);
+                                                   "Queue-lp-up-" + ntoa(j) + "-" + ntoa(k), k + NK);
 
             pipes_nlp_nup[j][k] = new Pipe(timeFromUs(RTT), *_eventlist,
                                            "Pipe-lp-up-" + ntoa(j) + "-" + ntoa(k));
@@ -137,7 +141,7 @@ void FatTreeTopology::init_network() {
                                                   memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER),
                                                   *_eventlist, queueLogger,
                                                   memFromPkt(RANDOM_BUFFER),
-                                                  "Queue-up-co-" + ntoa(j) + "-" + ntoa(k), k+2*NK);
+                                                  "Queue-up-co-" + ntoa(j) + "-" + ntoa(k), k + 2 * NK);
 
             pipes_nup_nc[j][k] = new Pipe(timeFromUs(RTT), *_eventlist,
                                           "Pipe-up-co-" + ntoa(j) + "-" + ntoa(k));
@@ -147,7 +151,7 @@ void FatTreeTopology::init_network() {
                                                   memFromPkt(SWITCH_BUFFER + RANDOM_BUFFER),
                                                   *_eventlist, queueLogger,
                                                   memFromPkt(RANDOM_BUFFER),
-                                                  "Queue-co-up-" + ntoa(k) + "-" + ntoa(j), j+NK);
+                                                  "Queue-co-up-" + ntoa(k) + "-" + ntoa(j), j + NK);
 
 
             pipes_nc_nup[k][j] = new Pipe(timeFromUs(RTT), *_eventlist,
@@ -161,10 +165,9 @@ void FatTreeTopology::init_network() {
     }
 }
 
-vector<route_t *> * FatTreeTopology::get_paths_ecmp(int src, int dest) {
+vector<route_t *> *FatTreeTopology::get_paths_ecmp(int src, int dest) {
     vector<route_t *> *paths = new vector<route_t *>();
-
-    route_t *routeout;
+    route_t *routeout = NULL;
     if (HOST_POD_SWITCH(src) == HOST_POD_SWITCH(dest)) {
         routeout = new route_t();
         routeout->push_back(HostTXQueues[src]);
@@ -182,7 +185,6 @@ vector<route_t *> * FatTreeTopology::get_paths_ecmp(int src, int dest) {
 
     } else if (HOST_POD(src) == HOST_POD(dest)) {
         //don't go up the hierarchy, stay in the pod only.
-
         int pod = HOST_POD(src);
         //there are K/2 paths between the source and the destination
         for (int upper = MIN_POD_ID(pod); upper <= MAX_POD_ID(pod); upper++) {
@@ -276,7 +278,6 @@ route_t *FatTreeTopology::get_path_2levelrt(int src, int dest) {
     } else if (HOST_POD(src) == HOST_POD(dest)) {
         int pod = HOST_POD(src);
         int srcHostID = src % (K / 2);
-        int destHostID = dest % (K / 2);
         int aggSwitchID = MIN_POD_ID(pod) + srcHostID;
 
         routeout->push_back(pipes_ns_nlp[src][HOST_POD_SWITCH(src)]);
@@ -301,7 +302,8 @@ route_t *FatTreeTopology::get_path_2levelrt(int src, int dest) {
         int srcHostID = src % (K / 2); //could be used as outgoing offset
         int destHostID = dest % (K / 2);
         int aggSwitchID1 = MIN_POD_ID(pod) + srcHostID;
-        int core = (aggSwitchID1 % (K / 2)) * (K / 2) + (destHostID) % (K/2); // [disabled]src_pod_id as an offset to diffuse incast traffic
+        int core = (aggSwitchID1 % (K / 2)) * (K / 2) +
+                   (destHostID) % (K / 2); // [disabled]src_pod_id as an offset to diffuse incast traffic
 
         int aggSwitchID2 = HOST_POD(dest) * K / 2 + 2 * core / K;
 
@@ -420,17 +422,17 @@ void FatTreeTopology::print_path(std::ofstream &paths, int src, route_t *route) 
     paths << endl;
 }
 
-int FatTreeTopology::getServerUnderTor(int tor,  int rack_num) {
-    int total = K * K / 2;
-    int sw = (int) ((double) tor / rack_num * total);
+int FatTreeTopology::getServerUnderTor(int tor, int givenTorNum) {
+    int totalTorNum = K * K / 2;
+    int mappedTor = (int) ((double) tor / givenTorNum * totalTorNum);
 
-    int result = rand_host_sw(sw);
+    int result = rand_host_sw(mappedTor);
 
     return result;
 }
 
 int FatTreeTopology::rand_host_sw(int sw) {
-    int hostPerEdge = K*RATIO / 2;
+    int hostPerEdge = K * RATIO / 2;
     int server_sw = rand() % hostPerEdge;
     int server = sw * hostPerEdge + server_sw;
     return server;
@@ -452,8 +454,8 @@ int FatTreeTopology::nodePair_to_link(int node1, int node2) {
 }
 
 bool FatTreeTopology::isPathValid(route_t *rt) {
-
-    if (rt == NULL) return false;
+    if (rt == NULL||rt->size()<2)
+        return false;
     for (int i = 0; i < rt->size(); i += 2) {
         if (rt->at(i)->_disabled) {
             return false;
@@ -467,31 +469,87 @@ pair<Queue *, Queue *> FatTreeTopology::linkToQueues(int linkid) {
     int lower, higher;
     if (linkid < NHOST) {
         lower = linkid;
-        higher = linkid / (K / 2);
+        higher = linkid / (K * RATIO / 2);
         ret.first = queues_ns_nlp[lower][higher];
         ret.second = HostRecvQueues[lower];
         return ret;
-    } else if (linkid >= NHOST && linkid < 2 * NHOST) {
+    } else if (linkid >= NHOST && linkid < NHOST + NK * K / 2) {
         linkid -= NHOST;
         lower = linkid / (K / 2);
-        higher = MIN_POD_ID(lower/(K/2)) + linkid % (K / 2);
+        higher = MIN_POD_ID(lower / (K / 2)) + linkid % (K / 2);
         ret.first = queues_nlp_nup[lower][higher];
         ret.second = queues_nup_nlp[higher][lower];
 
     } else {
-        assert(linkid >= 2 * NHOST && linkid < 3 * NHOST);
-        linkid -= 2 * NHOST;
+        assert(linkid >= NHOST + NK * K / 2 && linkid < NHOST + NK * K);
+        linkid -= (NHOST + NK * K / 2);
         lower = linkid / (K / 2);
         higher = (lower % (K / 2)) * (K / 2) + linkid % (K / 2);
         ret.first = queues_nup_nc[lower][higher];
         ret.second = queues_nc_nup[higher][lower];
     }
-    if(ret.first == nullptr || ret.second == nullptr){
-        cout<<"invalid linkid for failure:"<<linkid<<endl;
+    if (ret.first == nullptr || ret.second == nullptr) {
+        cout << "invalid linkid for failure:" << linkid << endl;
         exit(-1);
     }
     return ret;
 }
+
+void FatTreeTopology::failSwitch(int sid) {
+    vector<int> *links = getLinksFromSwitch(sid);
+    for (int link:*links) {
+        failLink(link);
+    }
+}
+
+void FatTreeTopology::recoverSwitch(int sid) {
+    vector<int> *links = getLinksFromSwitch(sid);
+    for (int link:*links) {
+        recoverLink(link);
+    }
+}
+
+vector<int> *FatTreeTopology::getLinksFromSwitch(int sid) {
+    vector<int> *ret = new vector<int>();
+    if (_failedSwitches[sid])
+        return ret;
+    if (sid < NK) {
+        //upfacing links
+        for (int i = 0; i < (K / 2); i++) {
+            int linkId = NHOST + sid * (K / 2) + i;
+            ret->push_back(linkId);
+        }
+        //down-facing links
+        for (int i = 0; i < (K / 2) * RATIO; i++) {
+            int linkId = sid * (K / 2) * RATIO + i;
+            ret->push_back(linkId);
+        }
+    } else if (sid >= NK && sid < 2 * NK) {
+        //upfacing links
+        for (int i = 0; i < K / 2; i++) {
+            int linkId = NHOST + sid * K / 2 + i;
+            ret->push_back(linkId);
+        }
+        //down-facing links
+        int linkOffset = sid % (K / 2);
+        int podId = (sid - NK) / (K / 2);
+        for (int lp = MIN_POD_ID(podId); lp <= MAX_POD_ID(podId); lp++) {
+            int linkId = lp * K / 2 + linkOffset + NHOST;
+            ret->push_back(linkId);
+        }
+
+    } else {
+        int coreOffset = (sid - 2 * NK) / (K / 2);
+        int linkOffset = (sid - 2 * NK) % (K / 2);
+        for (int pod = 0; pod < K; pod++) {
+            int aggId = pod * K / 2 + coreOffset + NK;
+            int linkId = aggId * K / 2 + linkOffset + NHOST;
+            ret->push_back(linkId);
+        }
+    }
+    return ret;
+}
+
 
 void FatTreeTopology::failLink(int linkid) {
     if (_failedLinks[linkid]) {
@@ -525,29 +583,35 @@ pair<route_t *, route_t *> FatTreeTopology::getStandardPath(int src, int dest) {
     //[WDM] note that for two-level routing, ack packets may go a different path than the data packets
     // here we assume that ACK always goes exactly the same path of data packets, just in opposite direction
     route_t *path = get_path_2levelrt(src, dest);
-    if (isPathValid(path)) {
-        route_t *ackPath = getReversePath(src, dest,path);
-        if (isPathValid(ackPath)) {
-            return make_pair(path, ackPath);
-        }
+    route_t *ackPath = getReversePath(src, dest, path);
+    return make_pair(path, ackPath);
+}
+
+pair<route_t *, route_t *> FatTreeTopology::getEcmpPath(int src, int dest) {
+    if (_net_paths[src][dest] == NULL) {
+        _net_paths[src][dest] = get_paths_ecmp(src, dest);
     }
-    return make_pair(nullptr, nullptr);
+    vector<route_t *> *paths = _net_paths[src][dest];
+    unsigned rnd = rand() % paths->size();
+    route_t *path = paths->at(rnd);
+    route_t *ackPath = getReversePath(src, dest, path);
+    return make_pair(path, ackPath);
 }
 
 
-pair<route_t *, route_t *> FatTreeTopology::getReroutingPath(int src, int dest, route_t* currentPath) {
- return getEcmpPath(src, dest);
+pair<route_t *, route_t *> FatTreeTopology::getReroutingPath(int src, int dest, route_t *currentPath) {
+    return getOneWorkingEcmpPath(src, dest);
 }
 
-pair<route_t*, route_t*> FatTreeTopology::getEcmpPath(int src, int dest) {
 
+pair<route_t *, route_t *> FatTreeTopology::getOneWorkingEcmpPath(int src, int dest) {
     if (_net_paths[src][dest] == NULL) {
         _net_paths[src][dest] = get_paths_ecmp(src, dest);
     }
     vector<route_t *> *paths = _net_paths[src][dest];
 //    auto rng = std::default_random_engine {};
 //    std::shuffle(std::begin(*paths), std::end(*paths), rng);
-    for (route_t* path: *paths) {
+    for (route_t *path: *paths) {
         if (isPathValid(path)) {
             route_t *ackPath = getReversePath(src, dest, path);
             if (isPathValid(ackPath)) {
@@ -556,20 +620,21 @@ pair<route_t*, route_t*> FatTreeTopology::getEcmpPath(int src, int dest) {
         }
     }
     return make_pair(nullptr, nullptr);
-
 }
 
-route_t* FatTreeTopology::getReversePath(int src, int dest, route_t *dataPath) {
+route_t *FatTreeTopology::getReversePath(int src, int dest, route_t *dataPath) {
+    if(!isPathValid(dataPath))
+        return nullptr;
+
     route_t *ackPath = new route_t();
-    assert(dataPath->size()>=2);
-    for(int i = dataPath->size()-2; i>=0; i-=2){
-        PacketSink* dualQueue = dataPath->at(i+1)->getDual();
-        PacketSink* dualPipe = dataPath->at(i)->getDual();
+    assert(dataPath->size() >= 2);
+    for (int i = dataPath->size() - 2; i >= 0; i -= 2) {
+        PacketSink *dualQueue = dataPath->at(i + 1)->getDual();
+        PacketSink *dualPipe = dataPath->at(i)->getDual();
         ackPath->push_back(dualPipe);
         ackPath->push_back(dualQueue);
     }
     ackPath->insert(ackPath->begin(), HostTXQueues[dest]);
     return ackPath;
 }
-
 

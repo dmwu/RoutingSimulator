@@ -15,12 +15,16 @@ public:
 
     virtual void recoverLink(int linkid) = 0;
 
+    virtual void failSwitch(int sid) =0;
+
+    virtual void recoverSwitch(int sid) =0;
+
     virtual pair<route_t*, route_t*> getReroutingPath(int src, int dest, route_t* currrentPath) = 0;
 
     virtual pair<route_t*, route_t*> getEcmpPath(int src, int dest) = 0;
+    virtual bool isPathValid(route_t *path) =0;
 
     virtual pair<route_t*, route_t*> getStandardPath(int src, int dest) = 0;
-
 
     virtual pair<Queue*, Queue*> linkToQueues(int linkid) = 0;
 

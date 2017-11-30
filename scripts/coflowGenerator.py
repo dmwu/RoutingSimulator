@@ -42,6 +42,7 @@ def rack2rack_generator(rackSize, srcStart, desStart, filename, datasize):
 
 if __name__ == "__main__":
     K = int(sys.argv[1])
+    Ratio = int(sys.argv[2])
     numServers = K**3/4
     podSize = K**2/4
     dataSize_MB = int(sys.argv[2])
