@@ -12,7 +12,7 @@
 // FAT
 #define K 16
 #define SERVER_LEVEL_TRAFFIC 1
-#define RATIO 4 //
+#define RATIO 4
 #define NSW K*K*5/4
 #define NHOST (K*K*K*RATIO/4)
 

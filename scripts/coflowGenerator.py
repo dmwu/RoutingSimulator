@@ -85,6 +85,6 @@ if __name__ == "__main__":
     #all2all_generator(numServers, "all2all_"+str(numServers), dataSize_MB)
     #pod2pod_generator(K,serversPerPod , 0, K-1, dataSize_MB)
     #rack2rack_generator(K/2, 0, 0+podSize, 'rack2rack_'+str(K/2), dataSize_MB)
-    permutation(numServers, rackNum, K, dataSize_MB)
-    #all2OneRack(numServers, rackNum, Ratio, 0, K, dataSize_MB)
+    #permutation(numServers, rackNum, K, dataSize_MB)
+    all2OneRack(numServers, rackNum, Ratio, 0, K, dataSize_MB)
 

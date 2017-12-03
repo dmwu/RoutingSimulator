@@ -49,7 +49,6 @@
 int N = NSW;
 
 
-
 map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats){
     map<int, double>* cct = new map<int, double>();
     for(pair<int,FlowConnection*> it: *flowStats){
@@ -111,6 +110,7 @@ int main(int argc, char **argv) {
             routing = atoi(argv[i + 1]);
             i += 2;
         }
+
         if (argc > i && !strcmp(argv[i], "-linkNum")) {
             failedLinkNum = atoi(argv[i + 1]);
             i += 2;
