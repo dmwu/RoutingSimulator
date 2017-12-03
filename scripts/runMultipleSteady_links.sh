@@ -12,7 +12,7 @@ for trace in "${arr[@]}"
             for trial in 1 2
                 do
                 fileName="top_"$top"_linkNum_"$linkNum"_trial_"$trial".txt"
-                ./main_MultipleSteadyLinkFailures -topo ${top} -routing 1 -linkNum "$linkNum" -switchNum 0 ../trafficTraces/$trace > ${fileName}
+                ./main_MultipleSteadyLinkFailures -topo ${top} -routing 1 -linkNum ${linkNum} -switchNum 0 ../trafficTraces/$trace > ${fileName}
             done
         done
     done
