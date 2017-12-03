@@ -14,15 +14,15 @@ def all2all_generator(serverNum, filename, datasize):
     f.close()
 
 
-def pod2pod_generator(podSize, srcStart, desStart, filename, datasize):
-    ff = '../trafficTraces/'+filename
+def pod2pod_generator(K,podSize, srcPod, desPod, datasize):
+    ff = '../trafficTraces/pod2pod_K'+str(K)+"podSize"+str(podSize)
     with open(ff, 'w+') as f:
         f.write(str(podSize)+' 1\n')
         f.write('0 0 '+str(podSize)+' ')
-        for server in range(srcStart, srcStart+podSize):
+        for server in range(srcPod*podSize, (srcPod+1)*podSize):
             f.write(str(server)+' ')
         f.write(str(podSize)+' ')
-        for server in range(desStart, desStart+podSize):
+        for server in range(desPod*podSize, (desPod+1)*podSize):
             f.write(str(server)+':'+str(datasize)+' ')
         f.write('\n')
     f.close()
@@ -42,7 +42,7 @@ def rack2rack_generator(rackSize, srcStart, desStart, filename, datasize):
     f.close()
 
 def permutation(serverNum,rackNum, K, dataSize):
-    interArrivalTimeMean = dataSize*8/10.0 # one tenth time of finish a flow
+    interArrivalTimeMean = dataSize*8/20.0 # one twentyth time of finish a flow
     ff = '../trafficTraces/permutation_K'+str(K)+'server'+str(serverNum)
     src = [x for x in range(serverNum)]
     dest = src[:]
@@ -79,11 +79,12 @@ if __name__ == "__main__":
     dataSize_MB = int(sys.argv[3])
     numServers = K**3/4*Ratio
     serversPerRack = K/2*Ratio;
+    serversPerPod = serversPerRack*K/2
     rackNum = K/2*K
     print 'numServers:%d, serversPerRack:%d dataSize_MB:%d' % (numServers, serversPerRack, dataSize_MB)
     #all2all_generator(numServers, "all2all_"+str(numServers), dataSize_MB)
-    #pod2pod_generator(podSize, 0, 0+podSize, 'pod2pod_'+str(podSize), dataSize_MB)
+    #pod2pod_generator(K,serversPerPod , 0, K-1, dataSize_MB)
     #rack2rack_generator(K/2, 0, 0+podSize, 'rack2rack_'+str(K/2), dataSize_MB)
-    #permutation(numServers, rackNum, K, dataSize_MB)
-    all2OneRack(numServers, rackNum, Ratio, 0, K, dataSize_MB)
+    permutation(numServers, rackNum, K, dataSize_MB)
+    #all2OneRack(numServers, rackNum, Ratio, 0, K, dataSize_MB)
 

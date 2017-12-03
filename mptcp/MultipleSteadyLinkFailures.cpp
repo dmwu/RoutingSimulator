@@ -4,7 +4,22 @@
 
 #include <set>
 #include <iostream>
+#include <random>
 #include "MultipleSteadyLinkFailures.h"
+
+struct Gen {
+    mt19937 g;
+    Gen() : g(static_cast<uint32_t>(time(0)))
+    {
+    }
+    size_t operator()(size_t n)
+    {
+        std::uniform_int_distribution<size_t> d(0, n ? n-1 : 0);
+        return d(g);
+    }
+};
+
+
 MultipleSteadyLinkFailures::MultipleSteadyLinkFailures(EventList*ev, Topology *topo): _ev(ev),_topo(topo) {
     _allLinks = new vector<int>();
     _allSwitches = new vector<int>();
@@ -35,8 +50,8 @@ void MultipleSteadyLinkFailures::setSingleSwitchFailure(int switchId) {
 }
 
 void MultipleSteadyLinkFailures::setRandomSwitchFailure(int num) {
-    std::srand(time(0));
-    std::random_shuffle(_inNetworkSwitches->begin(),_inNetworkSwitches->end());
+
+    std::random_shuffle(_inNetworkSwitches->begin(),_inNetworkSwitches->end(),Gen());
     for(int i = 0; i < num; i++){
         int sid = _inNetworkSwitches->at(i);
         _givenFailedSwitches->insert(sid);
@@ -103,8 +118,8 @@ void MultipleSteadyLinkFailures::updateBackupUsage() {
     }
 }
 void MultipleSteadyLinkFailures::setRandomLinkFailures(int num) {
-    std::srand (time(0));
-    std::random_shuffle ( _inNetworkLinks->begin(), _inNetworkLinks->end() );
+
+    std::random_shuffle (_inNetworkLinks->begin(), _inNetworkLinks->end(),Gen() );
     for(int i = 0; i < num; i++){
         int linkid = _inNetworkLinks->at(i);
         _givenFailedLinks->insert(linkid);

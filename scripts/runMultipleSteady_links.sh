@@ -12,8 +12,7 @@ for trace in "${arr[@]}"
             for trial in 1 2 3
                 do
                 fileName="top_"$top"_linkNum_"$failLinkNum"_trial_"$trial".txt"
-                echo $fileName
-                ./main -o log  -topo "$top" -routing 1 -linkNum "$failLinkNum" -switchNum 0 ../trafficTraces/$trace > ${fileName}
+                ./main -topo "$top" -routing 1 -linkNum "$failLinkNum" -switchNum 0 ../trafficTraces/$trace > ${fileName}
             done
         done
     done

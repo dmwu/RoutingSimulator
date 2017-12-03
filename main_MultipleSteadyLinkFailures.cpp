@@ -83,6 +83,7 @@ void fileNotFoundError(string fn){
 
 int main(int argc, char **argv) {
     clock_t begin = clock();
+    std::srand (time(0));
     eventlist.setEndtime(timeFromSec(2000.01));
 
     int failedLinks[]={};
