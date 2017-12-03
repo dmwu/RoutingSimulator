@@ -5,7 +5,7 @@ make clean;make
 declare -a ratio4trace=("perm_K16Ratio4server4096" "a2rack_K16Raio4RackSize32")
 declare -a ratio10trace=("perm_K16Ratio10server10240" "a2rack_K16Raio10RackSize80")
 
-for trace in "${ratio4trace[@]}"
+for trace in "${ratio10trace[@]}"
     do
     for top in 0 1 2
         do
@@ -18,6 +18,7 @@ for trace in "${ratio4trace[@]}"
             done
         done
     done
+
     wait
 
     linkFilename="final_links_"${trace}".res"
@@ -39,14 +40,14 @@ for trace in "${ratio4trace[@]}"
         done
     done
     wait
-    
+
     nodeFilename="final_nodes_"${trace}".res"
     for entry in ./*"switch"*${trace}".temp"
         do
         cat ${entry} >> ${nodeFilename}
         echo "" >> ${nodeFilename}
     done
-
+    rm *.temp
 done
 
 
