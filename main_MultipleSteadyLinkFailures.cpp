@@ -61,9 +61,9 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats){
     return cct;
 }
 
-string getCCTFileName(int topology, int routing, int link, string trace){
+string getCCTFileName(int topology, int routing, int linkNum, int switchNum, string trace){
     stringstream file;
-    file<<"top"<<itoa(topology) <<"rtng"<<itoa(routing)<<"K"<< K <<"links"<<itoa(link)<<trace<<".txt";
+    file<<"top"<<itoa(topology) <<"r"<<itoa(routing)<<"l"<<linkNum<<"s"<<switchNum<<trace<<".result";
     return file.str();
 }
 EventList eventlist;
@@ -124,6 +124,21 @@ int main(int argc, char **argv) {
         cout << "wrong arguments!" << endl;
         exit(1);
     }
+    if(topology == 0){
+        cout<< "Using FatTree Topology ";
+    }else if(topology == 1){
+        cout<<"Using ShareBackup Toplogy ";
+    }else{
+        cout<<"Using F10 Topology ";
+    }
+    if (routing == 0) {
+        cout << "Using ECMP Routing" << endl;
+    } else {
+        cout << "Using Standard Routing" << endl;
+    }
+
+    string traceName = traf_file_name.substr(traf_file_name.find("/")+1);
+    string cctLogFilename =getCCTFileName(topology,routing,failedLinkNum,failedSwitchNum,traceName);
 
 #if PRINT_PATHS
     filename << "logs.paths";
@@ -162,13 +177,10 @@ int main(int argc, char **argv) {
     }
     multipleSteadyLinkFailures->installFailures();
     int flowId = 0;
-    char file_name[1024];
-    strcpy(file_name, traf_file_name.c_str());
-
     string line;
-    ifstream traf_file(file_name);
+    ifstream traf_file(traf_file_name.c_str());
     if (!traf_file.is_open()) {
-        fileNotFoundError(file_name);
+        fileNotFoundError(traf_file_name.c_str());
     }
     getline(traf_file, line);
     int pos = line.find(" ");
@@ -184,7 +196,6 @@ int main(int argc, char **argv) {
 
     int src, dest;
     srand(time(NULL));
-    string cctFilename = getCCTFileName(topology,routing,failedLinkNum,traf_file_name);
     while (getline(traf_file, line)){
         int i = 0;
         int pos = line.find(" ");
@@ -299,6 +310,7 @@ int main(int argc, char **argv) {
 
     double frateAccm = 0,cctSum = 0;
 
+    std::ofstream cctLogFile(cctLogFilename.c_str());
     for (pair<int,FlowConnection*> it: *finishedFlowStats) {
         if(deadFlow->count(it.first) == 0) {
             double rate = (it.second->_flowSize_Bytes / 1e6) * 8 / (it.second->_duration_ms / 1e3); //in Mbps
@@ -308,22 +320,13 @@ int main(int argc, char **argv) {
     }
     map<int, double>* cct = getCoflowStats(finishedFlowStats);
     for(pair<int,double> it:*cct){
-        if(deadCoflow->count(it.first)==0)
+        if(deadCoflow->count(it.first)==0) {
             cctSum += it.second;
+            cctLogFile<<it.second<<endl;
+        } else
+            cctLogFile<<-1<<endl;
     }
 
-    if(topology == 0){
-        cout<< "Using FatTree Topology ";
-    }else if(topology == 1){
-        cout<<"Using ShareBackup Toplogy ";
-    }else{
-        cout<<"Using F10 Topology ";
-    }
-    if (routing == 0) {
-        cout << "Using ECMP Routing" << endl;
-    } else {
-        cout << "Using Standard Routing" << endl;
-    }
     cout <<"Finished flows:" << finishedFlowStats->size() << " all flows:" << totalFlows << endl;
     cout<<"Finished coflows:"<<cct->size()<<" all coflows:"<<coflowNum<<endl;
     cout <<"Average flow throughput:"<<frateAccm/totalFlows<<" Average CCT:"<<cctSum/cct->size()<<endl;

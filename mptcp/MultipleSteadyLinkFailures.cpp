@@ -145,12 +145,12 @@ void MultipleSteadyLinkFailures::installFailures() {
         actualFailedSwitches = _givenFailedSwitches;
     }
 
-    cout<<"failed switched:";
+    cout<<"failedSwitched:";
     for (int sid: *actualFailedSwitches){
         _topo->failSwitch(sid);
         cout<<sid<<" ";
     }
-    cout<<endl<<"failed links:";
+    cout<<" failedLinks:";
     for (int link: *actualFailedLinks) {
         _topo->failLink(link);
         cout<<link<<" ";

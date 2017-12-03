@@ -15,7 +15,7 @@ def all2all_generator(serverNum, filename, datasize):
 
 
 def pod2pod_generator(K,podSize, srcPod, desPod, datasize):
-    ff = '../trafficTraces/pod2pod_K'+str(K)+"podSize"+str(podSize)
+    ff = '../trafficTraces/p2p_K'+str(K)+'Ratio'+str(Ratio)+"podSize"+str(podSize)
     with open(ff, 'w+') as f:
         f.write(str(podSize)+' 1\n')
         f.write('0 0 '+str(podSize)+' ')
@@ -42,8 +42,8 @@ def rack2rack_generator(rackSize, srcStart, desStart, filename, datasize):
     f.close()
 
 def permutation(serverNum,rackNum, K, dataSize):
-    interArrivalTimeMean = dataSize*8/20.0 # one twentyth time of finish a flow
-    ff = '../trafficTraces/permutation_K'+str(K)+'server'+str(serverNum)
+    interArrivalTimeMean = dataSize*8.0/2 # one half time of finish a flow
+    ff = '../trafficTraces/perm_K'+str(K)+'Ratio'+str(Ratio)+'server'+str(serverNum)
     src = [x for x in range(serverNum)]
     dest = src[:]
     random.shuffle(dest)
@@ -57,8 +57,8 @@ def permutation(serverNum,rackNum, K, dataSize):
     f.close()
 
 def all2OneRack(serverNum,rackNum, Ratio, destRack, K, dataSize):
-    interArrivalTimeMean = dataSize*8/5.0 # one fifth time of finishing a flow
-    ff = '../trafficTraces/all2OneRack_K'+str(K)+'rackSize'+str(K*Ratio/2)
+    interArrivalTimeMean = dataSize*8.0/2 # one half time of finishing a flow
+    ff = '../trafficTraces/a2rack_K'+str(K)+'Ratio'+str(Ratio)+'RackSize'+str(K*Ratio/2)
     destLowIndex = destRack*K*Ratio/2
     destHighIndex = (destRack+1)*K*Ratio/2
     dest=[x for x in range(destLowIndex, destHighIndex)]
