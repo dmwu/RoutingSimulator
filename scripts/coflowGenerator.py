@@ -1,4 +1,5 @@
-import sys
+import sys,random
+
 def all2all_generator(serverNum, filename, datasize):
     ff = '../trafficTraces/'+filename
     with open(ff,'w+') as f:
@@ -40,14 +41,49 @@ def rack2rack_generator(rackSize, srcStart, desStart, filename, datasize):
         f.write('\n')
     f.close()
 
+def permutation(serverNum,rackNum, K, dataSize):
+    interArrivalTimeMean = dataSize*8/10.0 # one tenth time of finish a flow
+    ff = '../trafficTraces/permutation_K'+str(K)+'server'+str(serverNum)
+    src = [x for x in range(serverNum)]
+    dest = src[:]
+    random.shuffle(dest)
+    arrivalTime = 0
+    with open(ff, 'w+') as f:
+        f.write(str(rackNum)+" "+str(serverNum)+'\n')
+        for i in range(serverNum):
+            arrivalTime = 0 if i==0 else arrivalTime+round(random.expovariate(1/interArrivalTimeMean),2)
+            f.write(str(i)+' '+str(arrivalTime)+' 1 '+str(src[i])+' 1 '+str(dest[i])+':'+str(dataSize))
+            f.write('\n')
+    f.close()
+
+def all2OneRack(serverNum,rackNum, Ratio, destRack, K, dataSize):
+    interArrivalTimeMean = dataSize*8/5.0 # one fifth time of finishing a flow
+    ff = '../trafficTraces/all2OneRack_K'+str(K)+'rackSize'+str(K*Ratio/2)
+    destLowIndex = destRack*K*Ratio/2
+    destHighIndex = (destRack+1)*K*Ratio/2
+    dest=[x for x in range(destLowIndex, destHighIndex)]
+    src = [x for x in range(serverNum) if x not in dest]
+    random.shuffle(src)
+    arrivalTime = 0
+    with open(ff, 'w+') as f:
+        f.write(str(rackNum)+" "+str(len(src))+'\n')
+        for i in range(len(src)):
+            arrivalTime = 0 if i==0 else arrivalTime+round(random.expovariate(1/interArrivalTimeMean),2)
+            f.write(str(i)+' '+str(arrivalTime)+' 1 '+str(src[i])+' 1 '+str(random.choice(dest))+':'+str(dataSize))
+            f.write('\n')
+    f.close()
+
 if __name__ == "__main__":
     K = int(sys.argv[1])
     Ratio = int(sys.argv[2])
-    numServers = K**3/4
-    podSize = K**2/4
-    dataSize_MB = int(sys.argv[2])
-    print 'numServers:%d, podSize:%d dataSize_MB:%d' % (numServers, podSize, dataSize_MB)
+    dataSize_MB = int(sys.argv[3])
+    numServers = K**3/4*Ratio
+    serversPerRack = K/2*Ratio;
+    rackNum = K/2*K
+    print 'numServers:%d, serversPerRack:%d dataSize_MB:%d' % (numServers, serversPerRack, dataSize_MB)
     #all2all_generator(numServers, "all2all_"+str(numServers), dataSize_MB)
     #pod2pod_generator(podSize, 0, 0+podSize, 'pod2pod_'+str(podSize), dataSize_MB)
-    rack2rack_generator(K/2, 0, 0+podSize, 'rack2rack_'+str(K/2), dataSize_MB)
+    #rack2rack_generator(K/2, 0, 0+podSize, 'rack2rack_'+str(K/2), dataSize_MB)
+    #permutation(numServers, rackNum, K, dataSize_MB)
+    all2OneRack(numServers, rackNum, Ratio, 0, K, dataSize_MB)
 

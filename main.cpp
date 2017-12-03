@@ -49,7 +49,7 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats){
     map<int, double>* cct = new map<int, double>();
     for(pair<int,FlowConnection*> it: *flowStats){
         int cid = it.second->_coflowId;
-        int duration = it.second->_duration;
+        int duration = it.second->_duration_ms;
         if(cct->count(cid)==0 || cct->at(cid) < duration)
             (*cct)[cid] = duration;
     }
@@ -316,7 +316,7 @@ int main(int argc, char **argv) {
     double fsum = 0,csum = 0;
 
     for (pair<int,FlowConnection*> it: *flowStats) {
-        fsum += it.second->_duration;
+        fsum += it.second->_duration_ms;
     }
     map<int, double>* cct = getCoflowStats(flowStats);
 
@@ -337,13 +337,14 @@ int main(int argc, char **argv) {
     } else {
         cout << "Using Standard Routing" << endl;
     }
-    cout << "Finished flows:" << flowStats->size() << " all flows:" << totalFlows << endl;
+    cout <<"Finished flows:" << flowStats->size() << " all flows:" << totalFlows << endl;
     cout<<"Finished coflows:"<<cct->size()<<" all coflows:"<<coflowNum<<endl;
     cout <<"Average FCT:" << fsum / flowStats->size() << endl;
     cout <<"Average CCT:"<<csum/cct->size()<<endl;
     cout<<"Num of Impacted Flows:"<<impactedFlow->size()<<endl;
     cout<< "Num of Impacted Coflows:"<<impactedCoflow->size()<<endl;
-
+    cout<<"Num of Dead Flows:"<<deadFlow->size()<<endl;
+    cout<<"Num of Dead Coflows:"<<deadCoflow->size()<<endl;
     double elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
     cout << "Elapsed:" << elapsed_secs << "s" << endl;
 }

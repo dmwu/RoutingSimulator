@@ -18,7 +18,7 @@ done
 for entry in ./top*.txt
     do
     echo "$entry"
-    tail -n 8 "$entry" >> "final.txt"
+    tail -n 10 "$entry" >> "final.txt"
     echo "" >> "final.txt"
 done
 

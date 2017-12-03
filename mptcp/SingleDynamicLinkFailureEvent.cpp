@@ -200,7 +200,7 @@ bool SingleDynamicLinkFailureEvent::isPathOverlapping(route_t *path) {
 FlowConnection::FlowConnection(TcpSrc *tcpSrc, TcpSink *tcpSink, int sid, int src, int dest, uint32_t fs,
                                uint32_t arrivalTime_ms) : _tcpSrc(tcpSrc), _tcpSink(tcpSink),
                                                           _src(src), _dest(dest),_superId(sid),
-                                                        _flowSize(fs), _arrivalTimeMs(arrivalTime_ms)
+                                                        _flowSize_Bytes(fs), _arrivalTimeMs(arrivalTime_ms)
 {}
 FlowConnection::FlowConnection(TcpSrc *tsrc, TcpSink * tsink, int src, int dest):
 _tcpSrc(tsrc), _tcpSink(tsink), _src(src), _dest(dest)
@@ -212,7 +212,7 @@ double SingleDynamicLinkFailureEvent::getThroughputOfImpactedFlows( map<int, Flo
     for(FlowConnection* fc: *_connections){
         int key = fc->_tcpSrc->_super_id;
         if(flowStats->count(key)>0 ){
-            sum+=flowStats->at(key)->_duration;
+            sum+=flowStats->at(key)->_duration_ms;
             count++;
         }
     }

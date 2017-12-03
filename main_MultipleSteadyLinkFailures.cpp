@@ -54,7 +54,7 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats){
     map<int, double>* cct = new map<int, double>();
     for(pair<int,FlowConnection*> it: *flowStats){
         int cid = it.second->_coflowId;
-        int duration = it.second->_duration;
+        int duration = it.second->_duration_ms;
         if(cct->count(cid)==0 || cct->at(cid) < duration)
             (*cct)[cid] = duration;
     }
@@ -84,8 +84,10 @@ void fileNotFoundError(string fn){
 int main(int argc, char **argv) {
     clock_t begin = clock();
     eventlist.setEndtime(timeFromSec(2000.01));
+
     int failedLinks[]={};
-    int failedSwitches[]{37,64};
+    int failedSwitches[]{};
+
     int totalFlows = 0;
     set<int>* impactedCoflow = new set<int>();
     set<int>* impactedFlow = new set<int>();
@@ -149,6 +151,8 @@ int main(int argc, char **argv) {
         top = new F10Topology(&eventlist);
         multipleSteadyLinkFailures = new MultipleSteadyLinkFailures(&eventlist,top);
     }
+    multipleSteadyLinkFailures->setRandomLinkFailures(failedLinkNum);
+    multipleSteadyLinkFailures->setRandomSwitchFailure(failedSwitchNum);
     for(int i:failedLinks){
         multipleSteadyLinkFailures->setSingleLinkFailure(i);
     }
@@ -175,12 +179,12 @@ int main(int argc, char **argv) {
     vector<uint64_t *> flows_sent;
     vector<uint64_t *> flows_recv;
     vector<bool*> flows_finish;
-    map<int,FlowConnection*>* flowStats = new map<int, FlowConnection*>();
+    map<int,FlowConnection*>* finishedFlowStats = new map<int, FlowConnection*>();
 
     int src, dest;
     srand(time(NULL));
     string cctFilename = getCCTFileName(topology,routing,failedLinkNum,traf_file_name);
-    while (getline(traf_file, line)) {
+    while (getline(traf_file, line)){
         int i = 0;
         int pos = line.find(" ");
         int coflow_id = atoi(line.substr(0, pos).c_str());
@@ -254,7 +258,7 @@ int main(int argc, char **argv) {
                     }
                 }
                 tcpSrc = new TcpSrc(src, dest, eventlist, volume_bytes, arrivalTime_ms, flowId,
-                                    coflow_id, flowStats);
+                                    coflow_id, finishedFlowStats);
                 flowId++;
                 tcpSnk = new TcpSink(&eventlist);
                 // yiting
@@ -292,15 +296,19 @@ int main(int argc, char **argv) {
 
     }
 
-    double fsum = 0,csum = 0;
+    double frateAccm = 0,cctSum = 0;
 
-    for (pair<int,FlowConnection*> it: *flowStats) {
-        fsum += it.second->_duration;
+    for (pair<int,FlowConnection*> it: *finishedFlowStats) {
+        if(deadFlow->count(it.first) == 0) {
+            double rate = (it.second->_flowSize_Bytes / 1e6) * 8 / (it.second->_duration_ms / 1e3); //in Mbps
+            frateAccm+= rate;
+        }
+
     }
-    map<int, double>* cct = getCoflowStats(flowStats);
+    map<int, double>* cct = getCoflowStats(finishedFlowStats);
     for(pair<int,double> it:*cct){
         if(deadCoflow->count(it.first)==0)
-            csum += it.second;
+            cctSum += it.second;
     }
 
     if(topology == 0){
@@ -315,13 +323,11 @@ int main(int argc, char **argv) {
     } else {
         cout << "Using Standard Routing" << endl;
     }
-    cout << "Finished flows:" << flowStats->size() << " all flows:" << totalFlows << endl;
+    cout <<"Finished flows:" << finishedFlowStats->size() << " all flows:" << totalFlows << endl;
     cout<<"Finished coflows:"<<cct->size()<<" all coflows:"<<coflowNum<<endl;
-    cout <<"Average FCT:" << fsum / flowStats->size() << endl;
-    cout <<"Average CCT:"<<csum/cct->size()<<endl;
-    cout<<"Num of Impacted Flows:"<<impactedFlow->size()<<endl;
-    cout<< "Num of Impacted Coflows:"<<impactedCoflow->size()<<endl;
-
+    cout <<"Average flow throughput:"<<frateAccm/totalFlows<<" Average CCT:"<<cctSum/cct->size()<<endl;
+    cout<<"Num of Impacted Flows:"<<impactedFlow->size()<<" Num of Impacted Coflows:"<<impactedCoflow->size()<<endl;
+    cout<<"Num of Dead Flows:"<<deadFlow->size()<<" Num of Dead Coflows:"<<deadCoflow->size()<<endl;
     double elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
     cout << "Elapsed:" << elapsed_secs << "s" << endl;
 }

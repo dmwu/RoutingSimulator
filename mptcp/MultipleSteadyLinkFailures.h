@@ -16,10 +16,14 @@ class MultipleSteadyLinkFailures{
 public:
     MultipleSteadyLinkFailures(EventList*ev,Topology*topo);
     EventList*_ev;
-    set<int>* _failedLinks;
-    set<int>* _failedSwitches;
+    set<int>* _givenFailedLinks;
+    set<int>* _givenFailedSwitches;
     vector<int>* _allLinks;
     vector<int>* _allSwitches;
+
+    vector<int>* _inNetworkLinks;
+    vector<int>* _inNetworkSwitches;
+
     int _totalLinks;
     int _totalSwitches;
     void setSingleLinkFailure(int linkid);
@@ -30,8 +34,8 @@ public:
     void setRandomLinkFailures(double ratio);
     Topology*_topo;
     bool isPathOverlapping(route_t*);
-    vector<int>* _outstandingFailedLinks;
-    vector<int>* _outstandingFailedSwitches;
+    set<int>* _outstandingFailedLinks;
+    set<int>* _outstandingFailedSwitches;
     void installFailures();
     bool _useShareBackup =false;
     void updateBackupUsage();

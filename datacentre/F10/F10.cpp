@@ -544,7 +544,7 @@ pair<Queue *, Queue *> F10Topology::linkToQueues(int linkid) {
     int lower, higher;
     if (linkid < NHOST) {
         lower = linkid;
-        higher = linkid / (K / 2);
+        higher = linkid / (K*RATIO / 2);
         ret.first = queues_ns_nlp[lower][higher];
         ret.second = HostRecvQueues[lower];
         return ret;

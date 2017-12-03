@@ -458,7 +458,7 @@ void TcpSrc::rtx_timer_hook(simtime_picosec now, simtime_picosec period) {
         while (too_late > period) too_late >>= 1;
 
         // carry over the difference for restarting
-        simtime_picosec rtx_off = (period - too_late) / 200;
+        //simtime_picosec rtx_off = (period - too_late) / 200;
 
         //[WDM] since its already late, why not retransmit now
         //eventlist().sourceIsPendingRel(*this, rtx_off);
@@ -652,7 +652,7 @@ void TcpSrc::handleFlowCompletion() {
     FlowConnection *fc = new FlowConnection(this, (TcpSink *) _route->back(), _super_id, _src, _dest,
                                             _flow_volume_bytes, _flow_start_time_ms);
     fc->_completionTimeMs = eventlist().now()/1e9;
-    fc->_duration = duration_ms;
+    fc->_duration_ms = duration_ms;
     fc->_throughput=rate;
     fc->_coflowId = _coflowID;
     _flowStats->insert(pair<int, FlowConnection *>(_super_id, fc));

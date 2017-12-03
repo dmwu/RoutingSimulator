@@ -24,10 +24,10 @@ public:
     int _superId;
     int _coflowId;
     double _throughput=-1;
-    uint32_t _flowSize;
+    uint32_t _flowSize_Bytes;
     uint32_t _arrivalTimeMs;
     uint32_t _completionTimeMs=-1;
-    uint32_t _duration=-1;
+    uint32_t _duration_ms=-1;
 
 };
 enum LinkState {GOOD, WAITING_REROUTING, BAD, WAITING_RECOVER};
