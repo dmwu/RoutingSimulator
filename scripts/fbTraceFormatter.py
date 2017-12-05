@@ -11,7 +11,7 @@ def formatter(filename, timeScaleRatio, sizeFilter):
                 if(len(items)>2):
                     mapperNum = int(items[2])
                     reducerNum = int(items[2+mapperNum+1])
-                    print(mapperNum, reducerNum)
+                    #print(mapperNum, reducerNum)
                     if(mapperNum+reducerNum <= int(sizeFilter)):
                         coflowIndex += 1
                         if(startingTime < 0 or int(items[1]) < startingTime):
