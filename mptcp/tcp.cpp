@@ -645,10 +645,10 @@ void TcpSrc::handleFlowCompletion() {
     double duration_ms = (eventlist().now() / 1e9) - _flow_start_time_ms;
     double endToEndLossRate = (_packets_sent - _sink->_packets) * 1.0 / _packets_sent;
     double rate = (_flow_volume_bytes / 1e6) * 8 / (duration_ms / 1e3); //in Mbps
-    cout << "coflow:" << _coflowID << " " << (*_route)[0]->_gid << "->" << (*_route)[_route->size() - 2]->_gid
-         << " flowSize:" << _flow_volume_bytes << " superId:" <<
-         _super_id << " compTime(ms):" << duration_ms << " rate(Mbps):" << rate << " e2eLossRate:" << endToEndLossRate
-         << " rtx_rto:" << _retransmitCountTimeOut << " rtx_fast:" << _retransmitCountFastRecover << endl;
+//    cout << "coflow:" << _coflowID << " " << (*_route)[0]->_gid << "->" << (*_route)[_route->size() - 2]->_gid
+//         << " flowSize:" << _flow_volume_bytes << " superId:" <<
+//         _super_id << " compTime(ms):" << duration_ms << " rate(Mbps):" << rate << " e2eLossRate:" << endToEndLossRate
+//         << " rtx_rto:" << _retransmitCountTimeOut << " rtx_fast:" << _retransmitCountFastRecover << endl;
     FlowConnection *fc = new FlowConnection(this, (TcpSink *) _route->back(), _super_id, _src, _dest,
                                             _flow_volume_bytes, _flow_start_time_ms);
     fc->_completionTimeMs = eventlist().now()/1e9;

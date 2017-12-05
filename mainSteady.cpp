@@ -133,6 +133,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
+    cout<<"Topology:"<<topology<<" routing:"<<routing<<" failurePos:"<<failureLocation<<" K:"<<K<<endl;
+
     string traceName = traf_file_name.substr(traf_file_name.find("/")+1);
     string cctLogFilename =getCCTFileName(topology,routing,failedLinkNum,failedSwitchNum,traceName);
 
@@ -191,6 +193,8 @@ int main(int argc, char **argv) {
 
     int src, dest;
     srand(time(NULL));
+
+
     while (getline(traf_file, line)){
         int i = 0;
         int pos = line.find(" ");
@@ -320,7 +324,6 @@ int main(int argc, char **argv) {
             cctLogFile<<-1<<endl;
     }
     cctLogFile.flush();
-    cout<<"Topology:"<<topology<<" routing:"<<routing<<" failurePos:"<<failureLocation<<endl;
     multipleSteadyLinkFailures->printFailures();
     cout<<"FinishedFlows: " << finishedFlowStats->size() << " AllFlows: " << totalFlows << endl;
     cout<<"FinishedCoflows: "<<cct->size()<<" AllCoflows: "<<coflowNum<<endl;
