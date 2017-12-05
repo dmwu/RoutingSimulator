@@ -30,6 +30,7 @@ for trace in "${ratio4trace[@]}"
         cat ${entry} >> ${linkFilename}
         echo "" >> ${linkFilename}
     done
+    rm *.temp
 
     for top in 0 1 2
         do
