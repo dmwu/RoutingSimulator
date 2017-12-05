@@ -319,6 +319,7 @@ int main(int argc, char **argv) {
         } else
             cctLogFile<<-1<<endl;
     }
+    cctLogFile.flush();
     cout<<"Topology:"<<topology<<" routing:"<<routing<<" failurePos:"<<failureLocation<<endl;
     multipleSteadyLinkFailures->printFailures();
     cout<<"FinishedFlows: " << finishedFlowStats->size() << " AllFlows: " << totalFlows << endl;

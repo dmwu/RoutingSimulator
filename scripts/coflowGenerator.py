@@ -1,7 +1,7 @@
 import sys,random
 
-def all2all_generator(serverNum, filename, datasize):
-    ff = '../trafficTraces/'+filename
+def all2all_generator(serverNum, K, Ratio, datasize):
+    ff = '../trafficTraces/a2a_K'+str(K)+"Ratio"+str(Ratio)+"server"+str(serverNum)
     with open(ff,'w+') as f:
         f.write(str(serverNum)+' 1\n')
         f.write('0 0 '+str(serverNum)+' ')
@@ -82,9 +82,9 @@ if __name__ == "__main__":
     serversPerPod = serversPerRack*K/2
     rackNum = K/2*K
     print 'numServers:%d, serversPerRack:%d dataSize_MB:%d' % (numServers, serversPerRack, dataSize_MB)
-    #all2all_generator(numServers, "all2all_"+str(numServers), dataSize_MB)
+    all2all_generator(numServers, K,Ratio, dataSize_MB)
     #pod2pod_generator(K,serversPerPod , 0, K-1, dataSize_MB)
     #rack2rack_generator(K/2, 0, 0+podSize, 'rack2rack_'+str(K/2), dataSize_MB)
-    permutation(numServers, rackNum, K, dataSize_MB)
+    #permutation(numServers, rackNum, K, dataSize_MB)
     #all2OneRack(numServers, rackNum, Ratio, 0, K, dataSize_MB)
 
