@@ -26,11 +26,12 @@ MultipleSteadyLinkFailures::MultipleSteadyLinkFailures(EventList *ev, Topology *
 
     _totalLinks = NHOST + NK * K / 2 + NK * K / 2;
     _totalSwitches = NK + NK + NK / 2;
+
     for (int i = 0; i < _totalLinks; i++) {
         _allLinks->push_back(i);
         if (i < NHOST)
             _edgeLinks->push_back(i);
-        else if (NHOST <= i < NHOST + NK * K / 2)
+        else if (NHOST <= i && i < NHOST + NK * K / 2)
             _aggLinks->push_back(i);
         else
             _coreLinks->push_back(i);
@@ -38,11 +39,12 @@ MultipleSteadyLinkFailures::MultipleSteadyLinkFailures(EventList *ev, Topology *
         if (i >= NHOST)
             _inNetworkLinks->push_back(i);
     }
+
     for (int i = 0; i < _totalSwitches; i++) {
         _allSwitches->push_back(i);
         if (i < NK)
             _edgeSwitches->push_back(i);
-        else if (NK <= i < NK * 2)
+        else if (NK <= i && i < NK * 2)
             _aggSwitches->push_back(i);
         else
             _coreSwitches->push_back(i);
@@ -50,6 +52,7 @@ MultipleSteadyLinkFailures::MultipleSteadyLinkFailures(EventList *ev, Topology *
         if (i >= NK)
             _inNetworkSwitches->push_back(i);
     }
+
     _givenFailedLinks = new set<int>();
     _givenFailedSwitches = new set<int>();
 }
