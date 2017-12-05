@@ -2,7 +2,7 @@
 cd ../cmake-build-debug
 cmake ..
 make clean;make
-declare -a ratio4trace=("newfb_2min_1")
+declare -a ratio4trace=("newfb_5min_1")
 for trace in "${ratio4trace[@]}"
 do
     for top in 0 1 2
