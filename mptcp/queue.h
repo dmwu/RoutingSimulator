@@ -20,7 +20,7 @@ public:
 
     void doNextEvent();
     bool _isHostQueue = false;
-// should really be private, but loggers want to see
+    // should really be private, but loggers want to see
     mem_b _maxsize;
     mem_b _queuesize;
     Queue* _dualQueue;

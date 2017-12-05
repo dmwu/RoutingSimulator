@@ -14,7 +14,7 @@ do
                 for trial in 1
                     do
                     fileName="top_"${top}"_switchNum_"${switchNum}"pos"${pos}"_trial_"${trial}"_"${trace}".temp"
-                    ./mainSteady -topo ${top} -routing 0 -linkNum 0 -switchNum ${switchNum} -failurePos ${pos} ../trafficTraces/${trace} > ${fileName} &
+                    ./mainSteady -topo ${top} -routing 0 -linkNum 0 -switchNum ${switchNum} -failurePos ${pos} -trafficLevel 1 ../trafficTraces/${trace} > ${fileName} &
                 done
             done
         done

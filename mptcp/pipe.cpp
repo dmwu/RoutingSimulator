@@ -1,11 +1,20 @@
 #include "pipe.h"
 #include <iostream>
+#include <set>
+
 Pipe::Pipe(simtime_picosec delay, EventList& eventlist)
 : EventSource(eventlist,"pipe"), _delay(delay)
-	{}
+	{
+      _flowTracker = new set<int>();
+      _coflowTracker = new set<int>();
+    }
 Pipe::Pipe(simtime_picosec delay, EventList& eventlist, string gid)
         : EventSource(eventlist,"pipe"), _delay(delay)
-{_gid = gid;}
+{
+  _gid = gid;
+  _flowTracker = new set<int>();
+  _coflowTracker = new set<int>();
+}
 
 void
 Pipe::receivePacket(Packet& pkt)

@@ -1,6 +1,7 @@
 #include "queue.h"
 #include <iostream>
 #include <math.h>
+#include <set>
 
 Queue::Queue(linkspeed_bps bitrate, mem_b maxsize, EventList &eventlist, QueueLogger *logger)
         : EventSource(eventlist, "queue"),

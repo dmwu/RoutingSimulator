@@ -12,6 +12,7 @@
 #include <ctime>        // std::time
 #include <cstdlib>      // std::rand, std::srand
 #include "../main.h"
+
 class MultipleSteadyLinkFailures{
 public:
     MultipleSteadyLinkFailures(EventList*ev,Topology*topo);

@@ -600,26 +600,26 @@ pair<route_t *, route_t *> FatTreeTopology::getEcmpPath(int src, int dest) {
 
 
 pair<route_t *, route_t *> FatTreeTopology::getReroutingPath(int src, int dest, route_t *currentPath) {
-    return getOneWorkingEcmpPath(src, dest);
+    return getLeastLoadedPath(src, dest);
 }
 
 
-pair<route_t *, route_t *> FatTreeTopology::getOneWorkingEcmpPath(int src, int dest) {
+pair<route_t *, route_t *> FatTreeTopology::getLeastLoadedPath(int src, int dest) {
     if (_net_paths[src][dest] == NULL) {
         _net_paths[src][dest] = get_paths_ecmp(src, dest);
     }
     vector<route_t *> *paths = _net_paths[src][dest];
-//    auto rng = std::default_random_engine {};
-//    std::shuffle(std::begin(*paths), std::end(*paths), rng);
+    int minLoad = -1;
+    route_t* bestPath = nullptr;
     for (route_t *path: *paths) {
-        if (isPathValid(path)) {
-            route_t *ackPath = getReversePath(src, dest, path);
-            if (isPathValid(ackPath)) {
-                return make_pair(path, ackPath);
-            }
+        int load = Topology::getPathLoad(path);
+        if ((minLoad == -1 || load < minLoad) && isPathValid(path)) {
+            bestPath = path;
+            minLoad = load;
         }
     }
-    return make_pair(nullptr, nullptr);
+    route_t *ackPath = getReversePath(src, dest, bestPath);
+    return make_pair(bestPath, ackPath);
 }
 
 route_t *FatTreeTopology::getReversePath(int src, int dest, route_t *dataPath) {

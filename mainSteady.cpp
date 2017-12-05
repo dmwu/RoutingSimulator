@@ -89,10 +89,14 @@ int main(int argc, char **argv) {
     int failedSwitches[]{};
 
     int totalFlows = 0;
+
     set<int>* impactedCoflow = new set<int>();
     set<int>* impactedFlow = new set<int>();
     set<int>* deadCoflow = new set<int>();
     set<int>* deadFlow = new set<int>();
+    set<int>* secondImpactedFlow = new set<int>();
+    set<int>* secondImpactedCoflow = new set<int>();
+
     double simStartingTime_ms = -1;
 
     int routing = 0; //[WDM] 0 stands for ecmp; 1 stands for two-level routing
@@ -101,6 +105,7 @@ int main(int argc, char **argv) {
 
     int failedLinkNum = 0;
     int failedSwitchNum = 0;
+    int trafficLevel = 0; //0 stands for server level; 1 stands for rack level
     string traf_file_name;
     if (argc > 1) {
         int i = 1;
@@ -127,6 +132,10 @@ int main(int argc, char **argv) {
             i += 2;
         }
 
+        if (argc > i && !strcmp(argv[i], "-trafficLevel")) {
+            trafficLevel = atoi(argv[i + 1]);
+            i += 2;
+        }
         traf_file_name = argv[i];
     } else {
         cout << "wrong arguments!" << endl;
@@ -215,7 +224,7 @@ int main(int argc, char **argv) {
             i = ++pos;
             pos = line.find(" ", pos);
             str = line.substr(i, pos - i);
-            if (SERVER_LEVEL_TRAFFIC) {
+            if (trafficLevel == 0) {
                 mappers.push_back(atoi(str.c_str()));
             } else {
                 mappers.push_back(top->getServerUnderTor(atoi(str.c_str()), rack_n));
@@ -225,6 +234,7 @@ int main(int argc, char **argv) {
         pos = line.find(" ", pos);
         str = line.substr(i, pos - i);
         int reducer_n = atoi(str.c_str());
+
         totalFlows += mapper_n*reducer_n;
 
         for (int k = 0; k < reducer_n; k++) {
@@ -239,7 +249,7 @@ int main(int argc, char **argv) {
             int reducer = atoi(sub.c_str());
             sub = str.substr(posi + 1, str.length());
             uint64_t volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000000);
-            if (SERVER_LEVEL_TRAFFIC) {
+            if (trafficLevel == 0) {
                 dest = reducer;
             } else {
                 dest = top->getServerUnderTor(reducer, rack_n);
@@ -260,14 +270,24 @@ int main(int argc, char **argv) {
                     route_t* curPath = path.first;
                     path = top->getReroutingPath(src, dest, curPath);
 
+
                     if(!top->isPathValid(path.first) || !top->isPathValid(path.second)){
                         //cout<<"no path available for:"<<src<<"->"<<dest<<endl;
                         deadCoflow->insert(coflow_id);
                         deadFlow->insert(flowId);
                         flowId++;
                         continue;
+                    }else{
+                        for(unsigned i = 1; i < path.first->size(); i+=2) {
+                            Pipe* pipe = (Pipe*) path.first->at(i);
+                            secondImpactedFlow->insert(pipe->_flowTracker->begin(), pipe->_flowTracker->end());
+                            secondImpactedCoflow->insert(pipe->_coflowTracker->begin(), pipe->_coflowTracker->end());
+                        }
                     }
                 }
+
+                Topology::addFlowToPath(flowId,coflow_id, path.first);
+
                 tcpSrc = new TcpSrc(src, dest, eventlist, volume_bytes, arrivalTime_ms, flowId,
                                     coflow_id, finishedFlowStats);
                 flowId++;
@@ -300,7 +320,6 @@ int main(int argc, char **argv) {
             }
         }
     }
-
     tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     // GO!
     while (eventlist.doNextEvent()) {
@@ -329,6 +348,7 @@ int main(int argc, char **argv) {
     cout<<"FinishedCoflows: "<<cct->size()<<" AllCoflows: "<<coflowNum<<endl;
     cout<<"AverageFlowThroughput: "<<frateAccm/totalFlows<<" AverageCCT: "<<cctSum/cct->size()<<endl;
     cout<<"ImpactedFlows: "<<impactedFlow->size()<<" ImpactedCoflows: "<<impactedCoflow->size()<<endl;
+    cout<<"SecondImpactedFlows: "<<secondImpactedFlow->size()<<" SecondImpactedFlows: "<<secondImpactedCoflow<<endl;
     cout<<"DeadFlows: "<<deadFlow->size()<<" DeadCoflows: "<<deadCoflow->size()<<endl;
     double elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
     cout<<"Elapsed:" << elapsed_secs << "s" << endl;

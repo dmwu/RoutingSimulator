@@ -7,8 +7,6 @@
 #include <random>
 #include "MultipleSteadyLinkFailures.h"
 
-int myrandom(int i) { return std::rand() % i; }
-
 
 MultipleSteadyLinkFailures::MultipleSteadyLinkFailures(EventList *ev, Topology *topo) : _ev(ev), _topo(topo) {
     _allLinks = new vector<int>();
@@ -64,31 +62,31 @@ void MultipleSteadyLinkFailures::setSingleSwitchFailure(int switchId) {
 
 void MultipleSteadyLinkFailures::setRandomSwitchFailure(int num, int pos) {
     if (pos < 0) {
-        std::random_shuffle(_allSwitches->begin(), _allSwitches->end(), myrandom);
+        std::random_shuffle(_allSwitches->begin(), _allSwitches->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int sid = _allSwitches->at(i);
             _givenFailedSwitches->insert(sid);
         }
     } else if (pos == 0) {
-        std::random_shuffle(_edgeSwitches->begin(), _edgeSwitches->end(), myrandom);
+        std::random_shuffle(_edgeSwitches->begin(), _edgeSwitches->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int sid = _edgeSwitches->at(i);
             _givenFailedSwitches->insert(sid);
         }
     } else if (pos == 1) {
-        std::random_shuffle(_aggSwitches->begin(), _aggSwitches->end(), myrandom);
+        std::random_shuffle(_aggSwitches->begin(), _aggSwitches->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int sid = _aggSwitches->at(i);
             _givenFailedSwitches->insert(sid);
         }
     } else if (pos == 2) {
-        std::random_shuffle(_coreSwitches->begin(), _coreSwitches->end(), myrandom);
+        std::random_shuffle(_coreSwitches->begin(), _coreSwitches->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int sid = _coreSwitches->at(i);
             _givenFailedSwitches->insert(sid);
         }
     } else {
-        std::random_shuffle(_inNetworkSwitches->begin(), _inNetworkSwitches->end(), myrandom);
+        std::random_shuffle(_inNetworkSwitches->begin(), _inNetworkSwitches->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int sid = _inNetworkSwitches->at(i);
             _givenFailedSwitches->insert(sid);
@@ -155,31 +153,31 @@ void MultipleSteadyLinkFailures::updateBackupUsage() {
 
 void MultipleSteadyLinkFailures::setRandomLinkFailures(int num, int pos) {
     if (pos < 0) {
-        std::random_shuffle(_allLinks->begin(), _allLinks->end(), myrandom);
+        std::random_shuffle(_allLinks->begin(), _allLinks->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int linkid = _allLinks->at(i);
             _givenFailedLinks->insert(linkid);
         }
     } else if (pos == 0) {
-        std::random_shuffle(_edgeLinks->begin(), _edgeLinks->end(), myrandom);
+        std::random_shuffle(_edgeLinks->begin(), _edgeLinks->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int linkid = _edgeLinks->at(i);
             _givenFailedLinks->insert(linkid);
         }
     } else if (pos == 1) {
-        std::random_shuffle(_aggLinks->begin(), _aggLinks->end(), myrandom);
+        std::random_shuffle(_aggLinks->begin(), _aggLinks->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int linkid = _aggLinks->at(i);
             _givenFailedLinks->insert(linkid);
         }
     } else if (pos == 2) {
-        std::random_shuffle(_coreLinks->begin(), _coreLinks->end(), myrandom);
+        std::random_shuffle(_coreLinks->begin(), _coreLinks->end(),Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int linkid = _coreLinks->at(i);
             _givenFailedLinks->insert(linkid);
         }
     } else {
-        std::random_shuffle(_inNetworkLinks->begin(), _inNetworkLinks->end(), myrandom);
+        std::random_shuffle(_inNetworkLinks->begin(), _inNetworkLinks->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int linkid = _inNetworkLinks->at(i);
             _givenFailedLinks->insert(linkid);

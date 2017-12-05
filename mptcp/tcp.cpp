@@ -656,5 +656,6 @@ void TcpSrc::handleFlowCompletion() {
     fc->_throughput=rate;
     fc->_coflowId = _coflowID;
     _flowStats->insert(pair<int, FlowConnection *>(_super_id, fc));
+    Topology::removeFlowFromPath(_super_id, _coflowID, _route);
     //Topology::printPath(cout, _route);
 }
