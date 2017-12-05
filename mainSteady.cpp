@@ -68,7 +68,7 @@ string getCCTFileName(int topology, int routing, int linkNum, int switchNum, str
 EventList eventlist;
 
 void fileNotFoundError(string fn){
-    cout << "cannot find trace file:" << fn << "!" << endl;
+    cout << "cannot find trace file:" << fn << endl;
     char buffer[256];
     char *answer = getcwd(buffer, sizeof(buffer));
     string s_cwd;
@@ -97,6 +97,8 @@ int main(int argc, char **argv) {
 
     int routing = 0; //[WDM] 0 stands for ecmp; 1 stands for two-level routing
     int topology = 0; // 0 stands for fattree; 1 stands for sharebackup; 2 stands for f10
+    int failureLocation = 0;// 0 edge, 1 aggregation, 2 core
+
     int failedLinkNum = 0;
     int failedSwitchNum = 0;
     string traf_file_name;
@@ -119,22 +121,16 @@ int main(int argc, char **argv) {
             failedSwitchNum = atoi(argv[i + 1]);
             i += 2;
         }
+
+        if (argc > i && !strcmp(argv[i], "-failurePos")) {
+             failureLocation= atoi(argv[i + 1]);
+            i += 2;
+        }
+
         traf_file_name = argv[i];
     } else {
         cout << "wrong arguments!" << endl;
         exit(1);
-    }
-    if(topology == 0){
-        cout<< "Using FatTree Topology ";
-    }else if(topology == 1){
-        cout<<"Using ShareBackup Toplogy ";
-    }else{
-        cout<<"Using F10 Topology ";
-    }
-    if (routing == 0) {
-        cout << "Using ECMP Routing" << endl;
-    } else {
-        cout << "Using Standard Routing" << endl;
     }
 
     string traceName = traf_file_name.substr(traf_file_name.find("/")+1);
@@ -167,8 +163,8 @@ int main(int argc, char **argv) {
         top = new F10Topology(&eventlist);
         multipleSteadyLinkFailures = new MultipleSteadyLinkFailures(&eventlist,top);
     }
-    multipleSteadyLinkFailures->setRandomLinkFailures(failedLinkNum);
-    multipleSteadyLinkFailures->setRandomSwitchFailure(failedSwitchNum);
+    multipleSteadyLinkFailures->setRandomLinkFailures(failedLinkNum, failureLocation);
+    multipleSteadyLinkFailures->setRandomSwitchFailure(failedSwitchNum, failureLocation);
     for(int i:failedLinks){
         multipleSteadyLinkFailures->setSingleLinkFailure(i);
     }
@@ -187,7 +183,6 @@ int main(int argc, char **argv) {
     string str = line.substr(0, pos);
     int rack_n = atoi(str.c_str());
     int coflowNum = atoi(line.substr(pos + 1).c_str());
-    cout << "Num of racks:" << rack_n << " Num of Coflows:" << coflowNum << endl;
 
     vector<uint64_t *> flows_sent;
     vector<uint64_t *> flows_recv;
@@ -262,7 +257,7 @@ int main(int argc, char **argv) {
                     path = top->getReroutingPath(src, dest, curPath);
 
                     if(!top->isPathValid(path.first) || !top->isPathValid(path.second)){
-                        cout<<"no path available for:"<<src<<"->"<<dest<<endl;
+                        //cout<<"no path available for:"<<src<<"->"<<dest<<endl;
                         deadCoflow->insert(coflow_id);
                         deadFlow->insert(flowId);
                         flowId++;
@@ -307,9 +302,7 @@ int main(int argc, char **argv) {
     while (eventlist.doNextEvent()) {
 
     }
-
     double frateAccm = 0,cctSum = 0;
-
     std::ofstream cctLogFile(cctLogFilename.c_str());
     for (pair<int,FlowConnection*> it: *finishedFlowStats) {
         if(deadFlow->count(it.first) == 0) {
@@ -326,12 +319,13 @@ int main(int argc, char **argv) {
         } else
             cctLogFile<<-1<<endl;
     }
-
-    cout <<"Finished flows:" << finishedFlowStats->size() << " all flows:" << totalFlows << endl;
-    cout<<"Finished coflows:"<<cct->size()<<" all coflows:"<<coflowNum<<endl;
-    cout <<"Average flow throughput:"<<frateAccm/totalFlows<<" Average CCT:"<<cctSum/cct->size()<<endl;
-    cout<<"Num of Impacted Flows:"<<impactedFlow->size()<<" Num of Impacted Coflows:"<<impactedCoflow->size()<<endl;
-    cout<<"Num of Dead Flows:"<<deadFlow->size()<<" Num of Dead Coflows:"<<deadCoflow->size()<<endl;
+    cout<<"Topology:"<<topology<<" routing:"<<routing<<" failurePos:"<<failureLocation<<endl;
+    multipleSteadyLinkFailures->printFailures();
+    cout<<"FinishedFlows: " << finishedFlowStats->size() << " AllFlows: " << totalFlows << endl;
+    cout<<"FinishedCoflows: "<<cct->size()<<" AllCoflows: "<<coflowNum<<endl;
+    cout<<"AverageFlowThroughput: "<<frateAccm/totalFlows<<" AverageCCT: "<<cctSum/cct->size()<<endl;
+    cout<<"ImpactedFlows: "<<impactedFlow->size()<<" ImpactedCoflows: "<<impactedCoflow->size()<<endl;
+    cout<<"DeadFlows: "<<deadFlow->size()<<" DeadCoflows: "<<deadCoflow->size()<<endl;
     double elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
-    cout << "Elapsed:" << elapsed_secs << "s" << endl;
+    cout<<"Elapsed:" << elapsed_secs << "s" << endl;
 }

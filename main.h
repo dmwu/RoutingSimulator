@@ -10,9 +10,9 @@
 #define SP 0		// P = total ports on switch
 #define RTT 10 // Identical RTT microseconds = 0.01 ms [WDM] I change it to 10us to match the link speed.
 // FAT
-#define K 16
+#define K 6
 #define SERVER_LEVEL_TRAFFIC 1
-#define RATIO 10
+#define RATIO 4
 #define NSW K*K*5/4
 #define NHOST (K*K*K*RATIO/4)
 

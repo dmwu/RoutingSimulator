@@ -7,37 +7,47 @@
 #include <random>
 #include "MultipleSteadyLinkFailures.h"
 
-struct Gen {
-    mt19937 g;
-    Gen() : g(static_cast<uint32_t>(time(0)))
-    {
-    }
-    size_t operator()(size_t n)
-    {
-        std::uniform_int_distribution<size_t> d(0, n ? n-1 : 0);
-        return d(g);
-    }
-};
+int myrandom(int i) { return std::rand() % i; }
 
 
-MultipleSteadyLinkFailures::MultipleSteadyLinkFailures(EventList*ev, Topology *topo): _ev(ev),_topo(topo) {
+MultipleSteadyLinkFailures::MultipleSteadyLinkFailures(EventList *ev, Topology *topo) : _ev(ev), _topo(topo) {
     _allLinks = new vector<int>();
     _allSwitches = new vector<int>();
     _inNetworkLinks = new vector<int>();
     _inNetworkSwitches = new vector<int>();
     _outstandingFailedLinks = new set<int>();
     _outstandingFailedSwitches = new set<int>();
+    _edgeLinks = new vector<int>();
+    _edgeSwitches = new vector<int>();
+    _aggLinks = new vector<int>();
+    _aggSwitches = new vector<int>();
+    _coreLinks = new vector<int>();
+    _coreSwitches = new vector<int>();
 
-    _totalLinks = NHOST + NK*K/2+ NK*K/2;
-    _totalSwitches = NK+NK+NK/2;
-    for(int i = 0; i < _totalLinks;i++){
+    _totalLinks = NHOST + NK * K / 2 + NK * K / 2;
+    _totalSwitches = NK + NK + NK / 2;
+    for (int i = 0; i < _totalLinks; i++) {
         _allLinks->push_back(i);
-        if(i >= NHOST)
+        if (i < NHOST)
+            _edgeLinks->push_back(i);
+        else if (NHOST <= i < NHOST + NK * K / 2)
+            _aggLinks->push_back(i);
+        else
+            _coreLinks->push_back(i);
+
+        if (i >= NHOST)
             _inNetworkLinks->push_back(i);
     }
-    for(int i =0; i< _totalSwitches;i++){
+    for (int i = 0; i < _totalSwitches; i++) {
         _allSwitches->push_back(i);
-        if(i >= NK)
+        if (i < NK)
+            _edgeSwitches->push_back(i);
+        else if (NK <= i < NK * 2)
+            _aggSwitches->push_back(i);
+        else
+            _coreSwitches->push_back(i);
+
+        if (i >= NK)
             _inNetworkSwitches->push_back(i);
     }
     _givenFailedLinks = new set<int>();
@@ -49,66 +59,88 @@ void MultipleSteadyLinkFailures::setSingleSwitchFailure(int switchId) {
     _givenFailedSwitches->insert(switchId);
 }
 
-void MultipleSteadyLinkFailures::setRandomSwitchFailure(int num) {
-
-    std::random_shuffle(_inNetworkSwitches->begin(),_inNetworkSwitches->end(),Gen());
-    for(int i = 0; i < num; i++){
-        int sid = _inNetworkSwitches->at(i);
-        _givenFailedSwitches->insert(sid);
+void MultipleSteadyLinkFailures::setRandomSwitchFailure(int num, int pos) {
+    if (pos < 0) {
+        std::random_shuffle(_allSwitches->begin(), _allSwitches->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int sid = _allSwitches->at(i);
+            _givenFailedSwitches->insert(sid);
+        }
+    } else if (pos == 0) {
+        std::random_shuffle(_edgeSwitches->begin(), _edgeSwitches->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int sid = _edgeSwitches->at(i);
+            _givenFailedSwitches->insert(sid);
+        }
+    } else if (pos == 1) {
+        std::random_shuffle(_aggSwitches->begin(), _aggSwitches->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int sid = _aggSwitches->at(i);
+            _givenFailedSwitches->insert(sid);
+        }
+    } else if (pos == 2) {
+        std::random_shuffle(_coreSwitches->begin(), _coreSwitches->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int sid = _coreSwitches->at(i);
+            _givenFailedSwitches->insert(sid);
+        }
+    } else {
+        std::random_shuffle(_inNetworkSwitches->begin(), _inNetworkSwitches->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int sid = _inNetworkSwitches->at(i);
+            _givenFailedSwitches->insert(sid);
+        }
     }
 }
 
-void MultipleSteadyLinkFailures::setRandomSwitchFailure(double ratio) {
-    int numSwitches = (int)(ratio*_totalSwitches);
-    setRandomSwitchFailure(numSwitches);
+void MultipleSteadyLinkFailures::setRandomSwitchFailure(double ratio, int pos) {
+    int numSwitches = (int) (ratio * _totalSwitches);
+    setRandomSwitchFailure(numSwitches, pos);
 }
 
 void MultipleSteadyLinkFailures::updateBackupUsage() {
-    multiset<int>* groupFailureCount = new multiset<int>();
+    multiset<int> *groupFailureCount = new multiset<int>();
     int gid = -1;
-    for(int sid:*_givenFailedSwitches){
-        if(sid < 2*NK)
-            gid = sid/(K/2);
+    for (int sid:*_givenFailedSwitches) {
+        if (sid < 2 * NK)
+            gid = sid / (K / 2);
         else
-            gid = 2*K+(sid-2*NK)%(K/2);
-        if(groupFailureCount->count(gid) < BACKUPS_PER_GROUP )
+            gid = 2 * K + (sid - 2 * NK) % (K/2);
+        if (groupFailureCount->count(gid) < BACKUPS_PER_GROUP)
             groupFailureCount->insert(gid);
         else
             _outstandingFailedSwitches->insert(sid);
     }
-    for(int link:*_givenFailedLinks){
-        pair<Queue*,Queue*> ret = _topo->linkToQueues(link);
+    for (int link:*_givenFailedLinks) {
+        pair<Queue *, Queue *> ret = _topo->linkToQueues(link);
         int sid1 = ret.second->_switchId;
         int sid2 = ret.first->_switchId;
-        assert(sid1<=sid2);
-        if(sid1 < 0){ //host link failure
-            int gid2 = sid2/(K/2);
-            if(groupFailureCount->count(gid2)<BACKUPS_PER_GROUP)
+        assert(sid1 <= sid2);
+        if (sid1 < 0) { //host link failure
+            int gid2 = sid2 / (K / 2);
+            if (groupFailureCount->count(gid2) < BACKUPS_PER_GROUP)
                 groupFailureCount->insert(gid2);
             else
                 _outstandingFailedLinks->insert(link);
-        }
-        else if(sid1<NK) {
+        } else if (sid1 < NK) {
             //lp to up link failure
             assert(sid2 >= NK && sid2 < 2 * NK);
-            int gid1 = sid1/(K/2);
-            int gid2 = sid2/(K/2);
-            if(groupFailureCount->count(gid1) <BACKUPS_PER_GROUP
-                    && groupFailureCount->count(gid2)<BACKUPS_PER_GROUP)
-            {
+            int gid1 = sid1 / (K / 2);
+            int gid2 = sid2 / (K / 2);
+            if (groupFailureCount->count(gid1) < BACKUPS_PER_GROUP
+                && groupFailureCount->count(gid2) < BACKUPS_PER_GROUP) {
                 groupFailureCount->insert(gid1);
                 groupFailureCount->insert(gid2);
             } else
                 _outstandingFailedLinks->insert(link);
 
-        }else{
+        } else {
             // up to core link failure
-            assert(sid1<2*NK && sid2>=2*NK);
-            int gid1 = sid1/(K/2);
-            int gid2 = 2*K+ (sid2-2*NK)%(K/2);
-            if(groupFailureCount->count(gid1) <BACKUPS_PER_GROUP
-               && groupFailureCount->count(gid2)<BACKUPS_PER_GROUP)
-            {
+            assert(sid1 < 2 * NK && sid2 >= 2 * NK);
+            int gid1 = sid1 / (K / 2);
+            int gid2 = 2 * K + (sid2 - 2 * NK) % (K / 2);
+            if (groupFailureCount->count(gid1) < BACKUPS_PER_GROUP
+                && groupFailureCount->count(gid2) < BACKUPS_PER_GROUP) {
                 groupFailureCount->insert(gid1);
                 groupFailureCount->insert(gid2);
             } else
@@ -117,17 +149,44 @@ void MultipleSteadyLinkFailures::updateBackupUsage() {
 
     }
 }
-void MultipleSteadyLinkFailures::setRandomLinkFailures(int num) {
 
-    std::random_shuffle (_inNetworkLinks->begin(), _inNetworkLinks->end(),Gen() );
-    for(int i = 0; i < num; i++){
-        int linkid = _inNetworkLinks->at(i);
-        _givenFailedLinks->insert(linkid);
+void MultipleSteadyLinkFailures::setRandomLinkFailures(int num, int pos) {
+    if (pos < 0) {
+        std::random_shuffle(_allLinks->begin(), _allLinks->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int linkid = _allLinks->at(i);
+            _givenFailedLinks->insert(linkid);
+        }
+    } else if (pos == 0) {
+        std::random_shuffle(_edgeLinks->begin(), _edgeLinks->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int linkid = _edgeLinks->at(i);
+            _givenFailedLinks->insert(linkid);
+        }
+    } else if (pos == 1) {
+        std::random_shuffle(_aggLinks->begin(), _aggLinks->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int linkid = _aggLinks->at(i);
+            _givenFailedLinks->insert(linkid);
+        }
+    } else if (pos == 2) {
+        std::random_shuffle(_coreLinks->begin(), _coreLinks->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int linkid = _coreLinks->at(i);
+            _givenFailedLinks->insert(linkid);
+        }
+    } else {
+        std::random_shuffle(_inNetworkLinks->begin(), _inNetworkLinks->end(), myrandom);
+        for (int i = 0; i < num; i++) {
+            int linkid = _inNetworkLinks->at(i);
+            _givenFailedLinks->insert(linkid);
+        }
     }
 }
-void MultipleSteadyLinkFailures::setRandomLinkFailures(double ratio) {
-    int numLinks = (int) (ratio*_totalLinks);
-    setRandomLinkFailures(numLinks);
+
+void MultipleSteadyLinkFailures::setRandomLinkFailures(double ratio, int pos) {
+    int numLinks = (int) (ratio * _totalLinks);
+    setRandomLinkFailures(numLinks, pos);
 }
 
 void MultipleSteadyLinkFailures::setSingleLinkFailure(int linkid) {
@@ -135,26 +194,45 @@ void MultipleSteadyLinkFailures::setSingleLinkFailure(int linkid) {
 }
 
 void MultipleSteadyLinkFailures::installFailures() {
-    set<int>*actualFailedLinks, *actualFailedSwitches;
-    if(_useShareBackup) {
+    set<int> *actualFailedLinks, *actualFailedSwitches;
+    if (_useShareBackup) {
         updateBackupUsage();
         actualFailedLinks = _outstandingFailedLinks;
         actualFailedSwitches = _outstandingFailedSwitches;
-    }else{
+    } else {
         actualFailedLinks = _givenFailedLinks;
         actualFailedSwitches = _givenFailedSwitches;
     }
 
-    cout<<"failedSwitched:";
-    for (int sid: *actualFailedSwitches){
+    for (int sid: *actualFailedSwitches) {
         _topo->failSwitch(sid);
-        cout<<sid<<" ";
     }
-    cout<<" failedLinks:";
     for (int link: *actualFailedLinks) {
         _topo->failLink(link);
-        cout<<link<<" ";
     }
-    cout<<endl;
+    cout << endl;
+}
+
+void MultipleSteadyLinkFailures::printFailures() {
+    cout << "GivenFailedSwitches: ";
+    for (int sid:*_givenFailedSwitches) {
+        cout << sid << " ";
+    }
+    cout << "GivenFailedLinks: ";
+    for (int link:*_givenFailedLinks) {
+        cout << link << " ";
+    }
+    cout << endl;
+    if (_useShareBackup) {
+        cout << "ActualFailedSwitches: ";
+        for (int sid:*_outstandingFailedSwitches) {
+            cout << sid << " ";
+        }
+        cout << "ActualFailedLinks: ";
+        for (int link:*_outstandingFailedLinks) {
+            cout << link << " ";
+        }
+        cout << endl;
+    }
 }
 
