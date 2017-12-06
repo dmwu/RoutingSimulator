@@ -210,7 +210,7 @@ double SingleDynamicLinkFailureEvent::getThroughputOfImpactedFlows( map<int, Flo
     double sum = 0;
     int count = 0;
     for(FlowConnection* fc: *_connections){
-        int key = fc->_tcpSrc->_super_id;
+        int key = fc->_tcpSrc->_superId;
         if(flowStats->count(key)>0 ){
             sum+=flowStats->at(key)->_duration_ms;
             count++;

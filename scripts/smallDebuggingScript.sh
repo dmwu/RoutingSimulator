@@ -7,7 +7,7 @@ declare -a ratio10trace=("perm_K16Ratio10server10240" "a2rack_K16Ratio10RackSize
 
 for trace in "${ratio4trace[@]}"
     do
-    for top in 0 1 2
+    for top in 0 2
         do
         for linkNum in 1 3 5 10
             do
@@ -32,7 +32,7 @@ for trace in "${ratio4trace[@]}"
     done
     rm *.temp
 
-    for top in 0 1 2
+    for top in 0 2
         do
         for switchNum in 1 3 5 10
             do

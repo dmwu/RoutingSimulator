@@ -577,8 +577,8 @@ pair<Queue *, Queue *> F10Topology::linkToQueues(int linkid) {
 
 
 int F10Topology::getServerUnderTor(int torIndex, int torNum) {
-    int total = K * K / 2;
-    int mappedTor = (int) ((double) torIndex / torNum * total);
+    int rackSize = NK;
+    int mappedTor = (int) ((double) torIndex / torNum * rackSize);
 
     int result = rand_host_sw(mappedTor);
 
@@ -586,9 +586,9 @@ int F10Topology::getServerUnderTor(int torIndex, int torNum) {
 }
 
 int F10Topology::rand_host_sw(int sw) {
-    int hostPerEdge = K / 2;
-    int server_sw = rand() % hostPerEdge;
-    int server = sw * hostPerEdge + server_sw;
+    int hostPerEdge = K*RATIO/2;
+    int hostIndex = rand() % hostPerEdge;
+    int server = sw * hostPerEdge + hostIndex;
     return server;
 }
 

@@ -9,7 +9,7 @@
 ////////////////////////////////////////////////////////////////
 
 TcpSrc::TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger,
-               EventList &eventlist, map<int, FlowConnection *> *flowStats)
+               EventList &eventlist)
         : EventSource(eventlist, "tcp"), _logger(logger), _flow(pktlogger) {
     _mss = TcpPacket::DEFAULTDATASIZE;
     _maxcwnd = 0xffffffff;//MAX_SENT*_mss;
@@ -38,9 +38,9 @@ TcpSrc::TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger,
     _flow_total_received = 0;
     _flow_volume_bytes = 0;
     _flow_finish = false;
+    _flow_started = false;
     _flow_start_time_ms = 0;
-    _super_id = -1;
-    _flowStats = flowStats;
+    _superId = -1;
 
 #ifdef PACKET_SCATTER
     _crt_path = 0;
@@ -55,14 +55,10 @@ TcpSrc::TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger,
     _RFC2988_RTO_timeout = timeInf;
 }
 
-TcpSrc::TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventlist)
-        : EventSource(eventlist, "tcp"), _logger(logger), _flow(pktlogger) {
-    TcpSrc(logger, pktlogger, eventlist, NULL);
-}
 
-
-TcpSrc::TcpSrc(int src, int dest, EventList &eventlist, uint64_t volume, double startTime_ms, int super_id, int coflowId,
-               map<int, FlowConnection *> *flowStats) : EventSource(eventlist, "tcp"), _logger(NULL),_flow(NULL) {
+TcpSrc::TcpSrc(TcpSink *sink, int src, int dest, EventList &eventlist, uint64_t volume, double startTime_ms,
+               int super_id, int coflowId) :
+        EventSource(eventlist, "tcp"), _logger(NULL), _flow(NULL) {
     _mss = TcpPacket::DEFAULTDATASIZE;
     _maxcwnd = 0xffffffff;//MAX_SENT*_mss;
     _sawtooth = 0;
@@ -83,45 +79,24 @@ TcpSrc::TcpSrc(int src, int dest, EventList &eventlist, uint64_t volume, double 
     _in_fast_recovery = false;
     _mSrc = NULL;
     _drops = 0;
-    _flowStats = flowStats;
     // yiting
     _flow_total_sent = 0;
     _flow_total_received = 0;
     _flow_volume_bytes = volume;
     _flow_finish = false;
+    _flow_started = false;
     _flow_start_time_ms = startTime_ms;
-    _super_id = super_id;
+    _superId = super_id;
     _coflowID = coflowId;
     _src = src;
     _dest = dest;
-
-
-#ifdef PACKET_SCATTER
-    _crt_path = 0;
-    DUPACK_TH = 3;
-    _paths = NULL;
-#endif
-
+    _sink = sink;
     _old_route = NULL;
     _last_packet_with_old_route = 0;
-
     _rtx_timeout_pending = false;
     _RFC2988_RTO_timeout = timeInf;
 }
 
-#ifdef PACKET_SCATTER
-void TcpSrc::set_paths(vector<route_t*>* rt){
-  //this should only be used with route
-  _paths = new vector<route_t*>();
-
-  for (unsigned int i=0;i<rt->size();i++){
-    route_t* t = new route_t(*(rt->at(i)));
-    t->push_back(_sink);
-    _paths->push_back(t);
-  }
-  DUPACK_TH = 3 + rt->size();
-}
-#endif
 
 void TcpSrc::set_app_limit(int pktps) {
     if (_app_limited == 0 && pktps) {
@@ -161,10 +136,59 @@ void TcpSrc::connect(route_t &routeout, route_t &routeback, TcpSink &sink, simti
     _sink = &sink;
     _flow.id = id; // identify the packet flow with the TCP source that generated it
     _sink->connect(*this, routeback);
-    eventlist().sourceIsPending(*this, startTime_ps);
 }
 
-#define ABS(X) ((X)>0?(X):-(X))
+void TcpSrc::installTcp(Topology *topo) {
+    _topo = topo;
+    eventlist().sourceIsPending(*this, timeFromMs(_flow_start_time_ms));
+}
+
+void TcpSrc::setFlowCounter(set<int> *imf, set<int> *imc, set<int> *sf, set<int> *sc, set<int> *df, set<int> *dc,
+                            map<int, FlowConnection *> *flowStats) {
+    impactedFlow = imf;
+    impactedCoflow = imc;
+    secondImpactedFlow = sf;
+    secondImpactedCoflow = sc;
+    deadFlow = df;
+    deadCoflow = dc;
+    _flowStats = flowStats;
+}
+
+void TcpSrc::setupConnection() {
+    pair<route_t *, route_t *> path;
+    path = _topo->getStandardPath(_src, _dest);
+
+    if (!_topo->isPathValid(path.first) || !_topo->isPathValid(path.second)) {
+        impactedFlow->insert(_superId);
+        impactedCoflow->insert(_coflowID);
+
+        route_t *curPath = path.first;
+        path = _topo->getReroutingPath(_src, _dest, curPath);
+
+        if (!_topo->isPathValid(path.first) || !_topo->isPathValid(path.second)) {
+            //cout<<"no path available for:"<<src<<"->"<<dest<<endl;
+            deadCoflow->insert(_coflowID);
+            deadFlow->insert(_superId);
+            _flow_finish = true;
+            return;
+        }
+
+        for (unsigned i = 1; i < path.first->size()-1; i += 2) {
+            Pipe *pipe = (Pipe *) path.first->at(i);
+            secondImpactedFlow->insert(pipe->_flowTracker->begin(), pipe->_flowTracker->end());
+            secondImpactedCoflow->insert(pipe->_coflowTracker->begin(), pipe->_coflowTracker->end());
+        }
+    }
+    if(!_flow_finish) {
+        _route = new route_t(*(path.first));
+        _route->push_back(_sink);
+        route_t *routeBack = new route_t(*(path.second));
+        routeBack->push_back(this);
+        _sink->connect(*this, *routeBack);
+        Topology::addFlowToPath(_superId, _coflowID, _route);
+    }
+}
+
 
 void
 TcpSrc::receivePacket(Packet &pkt) {
@@ -374,7 +398,7 @@ TcpSrc::inflate_window() {
 // Note: the data sequence number is the number of Byte1 of the packet, not the last byte.
 void
 TcpSrc::send_packets() {
-    //cout << "id: " << _super_id << " volume: " << _flow_volume << " sent: " << *_flow_total_sent << endl;
+    //cout << "id: " << _superId << " volume: " << _flow_volume << " sent: " << *_flow_total_sent << endl;
 
     int c = _cwnd;
     if (_app_limited >= 0 && _rtt > 0) {
@@ -474,7 +498,15 @@ void TcpSrc::rtx_timer_hook(simtime_picosec now, simtime_picosec period) {
 }
 
 void TcpSrc::doNextEvent() {
-    //cout << "id = " << _super_id << endl;
+    //cout << "id = " << _superId << endl;
+    if (!_flow_started) {
+        setupConnection();
+        _flow_started = true;
+    }
+
+    if(_flow_finish)
+        return;
+
     if (_rtx_timeout_pending) {
         _rtx_timeout_pending = false;
 
@@ -516,7 +548,7 @@ void TcpSrc::doNextEvent() {
 
         retransmit_packet();
     } else {
-        //cout << "start flow " << _super_id << endl;
+        //cout << "start flow " << _superId << endl;
         startflow();
     }
 }
@@ -526,7 +558,7 @@ void TcpSrc::doNextEvent() {
 ////////////////////////////////////////////////////////////////
 
 TcpSink::TcpSink(EventList *ev)
-        : Logged("sink"), _eventList(ev),_cumulative_ack(0), _packets(0) {
+        : Logged("sink"), _eventList(ev), _cumulative_ack(0), _packets(0) {
 
 }
 
@@ -627,16 +659,15 @@ void
 TcpRtxTimerScanner::doNextEvent() {
     simtime_picosec now = eventlist().now();
     tcps_t::iterator i = _tcps.begin();
-    while( i != _tcps.end()) {
-        if(!(*i)->_flow_finish) {
+    while (i != _tcps.end()) {
+        if (!(*i)->_flow_finish) {
             (*i)->rtx_timer_hook(now, _scanPeriod);
             i++;
-        }
-        else{
+        } else {
             _tcps.erase(i++);
         }
     }
-    if(_tcps.size()>0)
+    if (_tcps.size() > 0)
         eventlist().sourceIsPendingRel(*this, _scanPeriod);
 }
 
@@ -645,17 +676,17 @@ void TcpSrc::handleFlowCompletion() {
     double duration_ms = (eventlist().now() / 1e9) - _flow_start_time_ms;
     double endToEndLossRate = (_packets_sent - _sink->_packets) * 1.0 / _packets_sent;
     double rate = (_flow_volume_bytes / 1e6) * 8 / (duration_ms / 1e3); //in Mbps
-//    cout << "coflow:" << _coflowID << " " << (*_route)[0]->_gid << "->" << (*_route)[_route->size() - 2]->_gid
-//         << " flowSize:" << _flow_volume_bytes << " superId:" <<
-//         _super_id << " compTime(ms):" << duration_ms << " rate(Mbps):" << rate << " e2eLossRate:" << endToEndLossRate
-//         << " rtx_rto:" << _retransmitCountTimeOut << " rtx_fast:" << _retransmitCountFastRecover << endl;
-    FlowConnection *fc = new FlowConnection(this, (TcpSink *) _route->back(), _super_id, _src, _dest,
+    cout << "coflow:" << _coflowID << " " << (*_route)[0]->_gid << "->" << (*_route)[_route->size() - 2]->_gid
+         << " flowSize:" << _flow_volume_bytes << " superId:" <<
+         _superId << " compTime(ms):" << duration_ms << " rate(Mbps):" << rate << " e2eLossRate:" << endToEndLossRate
+         << " rtx_rto:" << _retransmitCountTimeOut << " rtx_fast:" << _retransmitCountFastRecover << endl;
+    FlowConnection *fc = new FlowConnection(this, (TcpSink *) _route->back(), _superId, _src, _dest,
                                             _flow_volume_bytes, _flow_start_time_ms);
-    fc->_completionTimeMs = eventlist().now()/1e9;
+    fc->_completionTimeMs = eventlist().now() / 1e9;
     fc->_duration_ms = duration_ms;
-    fc->_throughput=rate;
+    fc->_throughput = rate;
     fc->_coflowId = _coflowID;
-    _flowStats->insert(pair<int, FlowConnection *>(_super_id, fc));
-    Topology::removeFlowFromPath(_super_id, _coflowID, _route);
+    _flowStats->insert(pair<int, FlowConnection *>(_superId, fc));
+    Topology::removeFlowFromPath(_superId, _coflowID, _route);
     //Topology::printPath(cout, _route);
 }

@@ -61,6 +61,7 @@ void MultipleSteadyLinkFailures::setSingleSwitchFailure(int switchId) {
 }
 
 void MultipleSteadyLinkFailures::setRandomSwitchFailure(int num, int pos) {
+    srand(1);
     if (pos < 0) {
         std::random_shuffle(_allSwitches->begin(), _allSwitches->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
@@ -152,6 +153,7 @@ void MultipleSteadyLinkFailures::updateBackupUsage() {
 }
 
 void MultipleSteadyLinkFailures::setRandomLinkFailures(int num, int pos) {
+    srand(1);
     if (pos < 0) {
         std::random_shuffle(_allLinks->begin(), _allLinks->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
@@ -211,7 +213,6 @@ void MultipleSteadyLinkFailures::installFailures() {
     for (int link: *actualFailedLinks) {
         _topo->failLink(link);
     }
-    cout << endl;
 }
 
 void MultipleSteadyLinkFailures::printFailures() {

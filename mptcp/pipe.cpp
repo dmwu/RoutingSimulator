@@ -6,14 +6,14 @@ Pipe::Pipe(simtime_picosec delay, EventList& eventlist)
 : EventSource(eventlist,"pipe"), _delay(delay)
 	{
       _flowTracker = new set<int>();
-      _coflowTracker = new set<int>();
+      _coflowTracker = new multiset<int>();
     }
 Pipe::Pipe(simtime_picosec delay, EventList& eventlist, string gid)
         : EventSource(eventlist,"pipe"), _delay(delay)
 {
   _gid = gid;
   _flowTracker = new set<int>();
-  _coflowTracker = new set<int>();
+  _coflowTracker = new multiset<int>();
 }
 
 void

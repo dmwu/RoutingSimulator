@@ -49,10 +49,12 @@
 int N = NSW;
 
 
-map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats){
+map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* deadCoflows){
     map<int, double>* cct = new map<int, double>();
     for(pair<int,FlowConnection*> it: *flowStats){
         int cid = it.second->_coflowId;
+        if(deadCoflows->count(cid)>0)
+            continue;
         int duration = it.second->_duration_ms;
         if(cct->count(cid)==0 || cct->at(cid) < duration)
             (*cct)[cid] = duration;
@@ -83,7 +85,7 @@ void fileNotFoundError(string fn){
 int main(int argc, char **argv) {
     clock_t begin = clock();
     std::srand (time(0));
-    eventlist.setEndtime(timeFromSec(2000.01));
+    eventlist.setEndtime(timeFromSec(3000.01));
 
     int failedLinks[]={};
     int failedSwitches[]{};
@@ -142,7 +144,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    cout<<"Topology:"<<topology<<" routing:"<<routing<<" failurePos:"<<failureLocation<<" K:"<<K<<endl;
+    cout<<"Topology:"<<topology<<" routing:"<<routing<<" failurePos:"
+        <<failureLocation<<" trafficLevel:"<<trafficLevel<<" K:"<<K<<endl;
 
     string traceName = traf_file_name.substr(traf_file_name.find("/")+1);
     string cctLogFilename =getCCTFileName(topology,routing,failedLinkNum,failedSwitchNum,traceName);
@@ -159,7 +162,6 @@ int main(int argc, char **argv) {
     TcpSrc *tcpSrc;
     TcpSink *tcpSnk;
 
-    route_t *routeout, *routein;
     TcpRtxTimerScanner tcpRtxScanner(timeFromMs(TCP_TIMEOUT_SCANNER_PERIOD), eventlist); //irregular tcp retransmit timeout
     Topology *top = NULL;
 
@@ -198,16 +200,14 @@ int main(int argc, char **argv) {
     vector<uint64_t *> flows_sent;
     vector<uint64_t *> flows_recv;
     vector<bool*> flows_finish;
-    map<int,FlowConnection*>* finishedFlowStats = new map<int, FlowConnection*>();
+    map<int,FlowConnection*>*finishedFlowStats = new map<int, FlowConnection*>();
 
     int src, dest;
-    srand(time(NULL));
-
-
+    srand(0);
     while (getline(traf_file, line)){
         int i = 0;
         int pos = line.find(" ");
-        int coflow_id = atoi(line.substr(0, pos).c_str());
+        int coflowId = atoi(line.substr(0, pos).c_str());
         i = ++pos;
         pos = line.find(" ", pos);
         string str = line.substr(i, pos - i);
@@ -256,67 +256,16 @@ int main(int argc, char **argv) {
             }
             for (int t = 0; t < mappers.size(); t++) {
                 src = mappers[t];
-                pair<route_t*, route_t*> path;
-                if (routing == 0) {
-                    path = top->getEcmpPath(src, dest);
 
-                } else {
-                    path = top->getStandardPath(src,dest);
-                }
-
-                if (!top->isPathValid(path.first) || !top->isPathValid(path.second)) {
-                    impactedFlow->insert(flowId);
-                    impactedCoflow->insert(coflow_id);
-                    route_t* curPath = path.first;
-                    path = top->getReroutingPath(src, dest, curPath);
-
-
-                    if(!top->isPathValid(path.first) || !top->isPathValid(path.second)){
-                        //cout<<"no path available for:"<<src<<"->"<<dest<<endl;
-                        deadCoflow->insert(coflow_id);
-                        deadFlow->insert(flowId);
-                        flowId++;
-                        continue;
-                    }else{
-                        for(unsigned i = 1; i < path.first->size(); i+=2) {
-                            Pipe* pipe = (Pipe*) path.first->at(i);
-                            secondImpactedFlow->insert(pipe->_flowTracker->begin(), pipe->_flowTracker->end());
-                            secondImpactedCoflow->insert(pipe->_coflowTracker->begin(), pipe->_coflowTracker->end());
-                        }
-                    }
-                }
-
-                Topology::addFlowToPath(flowId,coflow_id, path.first);
-
-                tcpSrc = new TcpSrc(src, dest, eventlist, volume_bytes, arrivalTime_ms, flowId,
-                                    coflow_id, finishedFlowStats);
-                flowId++;
                 tcpSnk = new TcpSink(&eventlist);
-                // yiting
+                tcpSrc = new TcpSrc(tcpSnk, src, dest, eventlist, volume_bytes, arrivalTime_ms, flowId, coflowId);
                 tcpSnk->set_super_id(flowId);
 
-                tcpSrc->setName("mtcp_" + ntoa(src) + "_" + ntoa(0) + "_" + ntoa(dest) + "(" +
-                                ntoa(0) + ")");
-
-                tcpSnk->setName("mtcp_sink_" + ntoa(src) + "_" + ntoa(0) + "_" + ntoa(dest) + "(" +
-                                ntoa(0) + ")");
-
+                tcpSrc->setFlowCounter(impactedFlow,impactedCoflow,secondImpactedFlow,secondImpactedCoflow,deadFlow,deadCoflow,finishedFlowStats);
+                tcpSrc->installTcp(top);
                 tcpRtxScanner.registerTcp(*tcpSrc);
+                flowId++;
 
-#if PRINT_PATHS
-                pathFile << "Coflow:" << coflow_id << ":" << subFlowID;
-                pathFile << " Route from " << ntoa(src) << " to " << ntoa(dest) << " -> ";
-                top->printPath(pathFile, path.first);
-#endif
-
-                routeout = new route_t(*(path.first));
-                routeout->push_back(tcpSnk);
-
-                routein = new route_t(*(path.second));
-
-                routein->push_back(tcpSrc);
-
-                tcpSrc->connect(*routeout, *routein, *tcpSnk, timeFromMs(arrivalTime_ms));
             }
         }
     }
@@ -334,13 +283,10 @@ int main(int argc, char **argv) {
         }
 
     }
-    map<int, double>* cct = getCoflowStats(finishedFlowStats);
+    map<int, double>* cct = getCoflowStats(finishedFlowStats,deadCoflow);
     for(pair<int,double> it:*cct){
-        if(deadCoflow->count(it.first)==0) {
             cctSum += it.second;
             cctLogFile<<it.second<<endl;
-        } else
-            cctLogFile<<-1<<endl;
     }
     cctLogFile.flush();
     multipleSteadyLinkFailures->printFailures();
@@ -348,7 +294,9 @@ int main(int argc, char **argv) {
     cout<<"FinishedCoflows: "<<cct->size()<<" AllCoflows: "<<coflowNum<<endl;
     cout<<"AverageFlowThroughput: "<<frateAccm/totalFlows<<" AverageCCT: "<<cctSum/cct->size()<<endl;
     cout<<"ImpactedFlows: "<<impactedFlow->size()<<" ImpactedCoflows: "<<impactedCoflow->size()<<endl;
-    cout<<"SecondImpactedFlows: "<<secondImpactedFlow->size()<<" SecondImpactedFlows: "<<secondImpactedCoflow<<endl;
+    set<int> distinctSecondImpactedCoflows(secondImpactedCoflow->begin(),secondImpactedCoflow->end());
+    cout<<"SecondImpactedFlows: "<<secondImpactedFlow->size()
+        <<" SecondImpactedCoFlows: "<<distinctSecondImpactedCoflows.size()<<endl;
     cout<<"DeadFlows: "<<deadFlow->size()<<" DeadCoflows: "<<deadCoflow->size()<<endl;
     double elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
     cout<<"Elapsed:" << elapsed_secs << "s" << endl;

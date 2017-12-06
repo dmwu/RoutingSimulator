@@ -6,6 +6,8 @@
  */
 
 #include <list>
+#include <set>
+#include "topology.h"
 #include "config.h"
 #include "network.h"
 #include "tcppacket.h"
@@ -28,19 +30,25 @@ class TcpSrc : public PacketSink, public EventSource {
 public:
     TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventlist);
 
-    TcpSrc(TcpLogger *logger, TrafficLogger *pktlogger, EventList &eventList, map<int,FlowConnection*>* flowStats);
-
-    TcpSrc(int src, int dest, EventList &eventlist, uint64_t volume, double start_ms, int super_id, int coflowId,
-           map<int,FlowConnection*>* flowStats);
+    TcpSrc(TcpSink*sink, int src, int dest, EventList &eventlist, uint64_t volume, double start_ms, int super_id, int coflowId);
 
     virtual void connect(route_t &routeout, route_t &routeback, TcpSink &sink, simtime_picosec startTime_ps);
+    void installTcp(Topology* topo);
+    void setupConnection();
 
     void startflow();
 
     inline void joinMultipathConnection(MultipathTcpSrc *multipathSrc) {
         _mSrc = multipathSrc;
     };
+    set<int>* impactedCoflow;
+    set<int>* impactedFlow;
+    set<int>* deadCoflow;
+    set<int>* deadFlow;
+    set<int>* secondImpactedFlow;
+    set<int>* secondImpactedCoflow;
 
+    void setFlowCounter(set<int>* imf, set<int>*imc,set<int>*sf, set<int>*sc,set<int>*df, set<int>*dc,  map<int,FlowConnection*>* flowStats);
     virtual void doNextEvent();
 
     virtual void receivePacket(Packet &pkt);
@@ -69,10 +77,12 @@ public:
     uint64_t _flow_total_received;
     uint64_t _flow_volume_bytes;
     bool _flow_finish;
+    bool _flow_started=false;
     double _flow_start_time_ms;
-    int _super_id;
+    int _superId;
     int _coflowID;
-    int _src,_dest;
+    int _src, _dest;
+    Topology* _topo = nullptr;
 
 #ifdef PACKET_SCATTER
     uint16_t DUPACK_TH;

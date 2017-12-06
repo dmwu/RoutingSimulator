@@ -30,7 +30,7 @@ public:
     }
     virtual PacketSink* getDual(){return _dualPipe;}
     set<int>* _flowTracker;
-    set<int>* _coflowTracker;
+    multiset<int>* _coflowTracker;
 private:
     simtime_picosec _delay;
     typedef pair<simtime_picosec, Packet *> pktrecord_t;

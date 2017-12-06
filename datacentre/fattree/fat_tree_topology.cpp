@@ -423,7 +423,7 @@ void FatTreeTopology::print_path(std::ofstream &paths, int src, route_t *route) 
 }
 
 int FatTreeTopology::getServerUnderTor(int tor, int givenTorNum) {
-    int totalTorNum = K * K / 2;
+    int totalTorNum = NK;
     int mappedTor = (int) ((double) tor / givenTorNum * totalTorNum);
 
     int result = rand_host_sw(mappedTor);
