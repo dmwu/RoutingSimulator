@@ -54,10 +54,12 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
     for(pair<int,FlowConnection*> it: *flowStats){
         int cid = it.second->_coflowId;
         if(deadCoflows->count(cid)>0)
-            continue;
-        int duration = it.second->_duration_ms;
-        if(cct->count(cid)==0 || cct->at(cid) < duration)
-            (*cct)[cid] = duration;
+            (*cct)[cid] = INT32_MAX;
+        else {
+            int duration = it.second->_duration_ms;
+            if (cct->count(cid) == 0 || cct->at(cid) < duration)
+                (*cct)[cid] = duration;
+        }
     }
     return cct;
 }
@@ -276,28 +278,29 @@ int main(int argc, char **argv) {
     }
     double frateAccm = 0,cctSum = 0;
     std::ofstream cctLogFile(cctLogFilename.c_str());
+    assert(cctLogFile.is_open());
     for (pair<int,FlowConnection*> it: *finishedFlowStats) {
         if(deadFlow->count(it.first) == 0) {
             double rate = (it.second->_flowSize_Bytes / 1e6) * 8 / (it.second->_duration_ms / 1e3); //in Mbps
             frateAccm+= rate;
         }
-
     }
     map<int, double>* cct = getCoflowStats(finishedFlowStats,deadCoflow);
     for(pair<int,double> it:*cct){
             cctSum += it.second;
-            cctLogFile<<it.second<<endl;
+            cctLogFile<<it.first<<" "<<it.second<<endl;
     }
     cctLogFile.flush();
+    cctLogFile.close();
     multipleSteadyLinkFailures->printFailures();
     cout<<"FinishedFlows: " << finishedFlowStats->size() << " AllFlows: " << totalFlows << endl;
     cout<<"FinishedCoflows: "<<cct->size()<<" AllCoflows: "<<coflowNum<<endl;
-    cout<<"AverageFlowThroughput: "<<frateAccm/totalFlows<<" AverageCCT: "<<cctSum/cct->size()<<endl;
-    cout<<"ImpactedFlows: "<<impactedFlow->size()<<" ImpactedCoflows: "<<impactedCoflow->size()<<endl;
+    //cout<<"AverageFlowThroughput: "<<frateAccm/totalFlows<<" AverageCCT: "<<cctSum/cct->size()<<endl;
+    cout<<"ImpactedFlows: "<<impactedFlow->size()<<" ImpactedCoflows: "<<impactedCoflow->size();
     set<int> distinctSecondImpactedCoflows(secondImpactedCoflow->begin(),secondImpactedCoflow->end());
-    cout<<"SecondImpactedFlows: "<<secondImpactedFlow->size()
-        <<" SecondImpactedCoFlows: "<<distinctSecondImpactedCoflows.size()<<endl;
-    cout<<"DeadFlows: "<<deadFlow->size()<<" DeadCoflows: "<<deadCoflow->size()<<endl;
+    cout<<" SecondImpactedFlows: "<<secondImpactedFlow->size()
+        <<" SecondImpactedCoFlows: "<<distinctSecondImpactedCoflows.size();
+    cout<<" DeadFlows: "<<deadFlow->size()<<" DeadCoflows: "<<deadCoflow->size()<<endl;
     double elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
     cout<<"Elapsed:" << elapsed_secs << "s" << endl;
 }

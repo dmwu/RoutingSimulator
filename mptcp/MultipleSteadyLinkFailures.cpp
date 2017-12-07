@@ -216,21 +216,23 @@ void MultipleSteadyLinkFailures::installFailures() {
 }
 
 void MultipleSteadyLinkFailures::printFailures() {
-    cout << "GivenFailedSwitches: ";
+    cout <<"GivenFailedSwitchNum: "<<_givenFailedSwitches->size()<<" GivenFailedSwitches: ";
     for (int sid:*_givenFailedSwitches) {
         cout << sid << " ";
     }
-    cout << "GivenFailedLinks: ";
+    cout<<endl;
+    cout <<"GivenFailedLinkNum: "<<_givenFailedLinks->size()<< " GivenFailedLinks: ";
     for (int link:*_givenFailedLinks) {
         cout << link << " ";
     }
     cout << endl;
     if (_useShareBackup) {
-        cout << "ActualFailedSwitches: ";
+        cout <<"ActualFailedSwitchNum: "<<_outstandingFailedSwitches->size()<< " ActualFailedSwitches: ";
         for (int sid:*_outstandingFailedSwitches) {
             cout << sid << " ";
         }
-        cout << "ActualFailedLinks: ";
+        cout<<endl;
+        cout <<"ActualFailedLinkNum: "<<_outstandingFailedLinks->size()<< " ActualFailedLinks: ";
         for (int link:*_outstandingFailedLinks) {
             cout << link << " ";
         }
