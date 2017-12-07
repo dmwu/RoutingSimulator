@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
     cout<<"Topology:"<<topology<<" routing:"<<routing<<" failurePos:"
         <<failureLocation<<" trafficLevel:"<<trafficLevel<<" K:"<<K<<endl;
 
-    string traceName = traf_file_name.substr(traf_file_name.find("/")+1);
+    string traceName = traf_file_name.substr(traf_file_name.rfind("/")+1);
     string cctLogFilename =getCCTFileName(topology,routing,failedLinkNum,failedSwitchNum,traceName);
 
 #if PRINT_PATHS
