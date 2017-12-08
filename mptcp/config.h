@@ -55,8 +55,8 @@ using namespace std;
 #endif
 
 #ifdef _WIN32
-#define max(a,b) (((a)>(b))?(a):(b))
-#define min(a,b) (((a)<(b))?(a):(b))
+#define mymax(a,b) (((a)>(b))?(a):(b))
+#define mymin(a,b) (((a)<(b))?(a):(b))
 #endif
 
 #endif
