@@ -71,7 +71,7 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
 
 string getCCTFileName(int topology, int pos, int linkNum, int switchNum, string trace){
     stringstream file;
-    file<<"top"<<topology<<"pos"<<pos<<"l"<<linkNum<<"s"<<switchNum<<trace<<".cct";
+    file<<"top"<<topology<<"_"<<GLOBAL_LOAD_BALANCING<<"pos"<<pos<<"l"<<linkNum<<"s"<<switchNum<<trace<<".cct";
     return file.str();
 }
 EventList eventlist;

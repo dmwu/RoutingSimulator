@@ -600,7 +600,7 @@ pair<route_t *, route_t *> FatTreeTopology::getEcmpPath(int src, int dest) {
 
 
 pair<route_t *, route_t *> FatTreeTopology::getReroutingPath(int src, int dest, route_t *currentPath) {
-    if(GLOBAL_LOAD_BALANCING)
+    if(GLOBAL_LOAD_BALANCING>0)
         return getLeastLoadedPath(src, dest);
     else
         return getOneWorkingPath(src,dest);
