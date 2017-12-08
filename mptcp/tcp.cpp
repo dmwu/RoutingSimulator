@@ -232,7 +232,6 @@ TcpSrc::receivePacket(Packet &pkt) {
         } else {
             _rtt = m;
             _mdev = m / 2;
-
             _rto = _rtt + 4 * _mdev;
         }
     }

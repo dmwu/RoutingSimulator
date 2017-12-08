@@ -54,7 +54,6 @@ for trace in "${ratio4trace[@]}"
         echo "" >> ${nodeFilename}
     done
     rm *.temp
-
 done
 
 

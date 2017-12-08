@@ -78,6 +78,7 @@ public:
 protected:
     map<RandomQueue *, int> _link_usage;
     virtual pair<route_t*, route_t*> getLeastLoadedPath(int src, int dest);
+    virtual pair<route_t*, route_t*> getOneWorkingPath(int src, int dest);
     vector<route_t *> ***_net_paths;
 
     int find_lp_switch(RandomQueue *queue);
