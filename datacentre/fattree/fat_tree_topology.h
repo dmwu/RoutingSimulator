@@ -4,7 +4,6 @@
 #include "../../main.h"
 #include "randomqueue.h"
 #include "pipe.h"
-#include "config.h"
 #include "loggers.h"
 #include "network.h"
 #include "topology.h"
