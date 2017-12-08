@@ -631,7 +631,7 @@ pair<route_t*, route_t*> FatTreeTopology::getOneWorkingPath(int src, int dest) {
     }
     route_t* retPath = nullptr;
     vector<route_t *> *paths = _net_paths[src][dest];
-    std::random_shuffle(paths->begin(),paths->end(),Topology::myrandom);
+    std::random_shuffle(paths->begin(), paths->end(), Topology::myrandom);
     for (route_t * path: *paths) {
         if ( isPathValid(path)) {
             retPath = path;
