@@ -9,9 +9,6 @@
 #include "topology.h"
 #include "logfile.h"
 #include "eventlist.h"
-#include <algorithm>    // std::random_shuffle
-#include <ctime>        // std::time
-#include <cstdlib>      // std::rand, std::srand
 #include <ostream>
 
 #define FAIL_RATE 0.0
