@@ -61,6 +61,11 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
                 (*cct)[cid] = duration;
         }
     }
+    for (int dc:*deadCoflows){
+        if(cct->count(dc) == 0){
+            (*cct)[dc] = INT32_MAX;
+        }
+    }
     return cct;
 }
 
@@ -100,6 +105,8 @@ int main(int argc, char **argv) {
     set<int>* deadFlow = new set<int>();
     set<int>* secondImpactedFlow = new set<int>();
     set<int>* secondImpactedCoflow = new set<int>();
+    set<int>* totalImpactedFlow = new set<int>();
+    set<int>* totalImpactedCoflow = new set<int>();
 
     double simStartingTime_ms = -1;
 
@@ -202,7 +209,7 @@ int main(int argc, char **argv) {
     vector<uint64_t *> flows_sent;
     vector<uint64_t *> flows_recv;
     vector<bool*> flows_finish;
-    map<int,FlowConnection*>*finishedFlowStats = new map<int, FlowConnection*>();
+    map<int,FlowConnection*>* finishedFlowStats = new map<int, FlowConnection*>();
 
     int src, dest;
     srand(0);
@@ -279,7 +286,7 @@ int main(int argc, char **argv) {
     double frateAccm = 0,cctSum = 0;
     std::ofstream cctLogFile(cctLogFilename.c_str());
     assert(cctLogFile.is_open());
-    for (pair<int,FlowConnection*> it: *finishedFlowStats) {
+    for (pair<int,FlowConnection*>it: *finishedFlowStats) {
         if(deadFlow->count(it.first) == 0) {
             double rate = (it.second->_flowSize_Bytes / 1e6) * 8 / (it.second->_duration_ms / 1e3); //in Mbps
             frateAccm+= rate;
@@ -292,14 +299,24 @@ int main(int argc, char **argv) {
     }
     cctLogFile.flush();
     cctLogFile.close();
+
+    //tally total impact
+    totalImpactedFlow->insert(impactedFlow->begin(),impactedFlow->end());
+    totalImpactedFlow->insert(secondImpactedFlow->begin(),secondImpactedFlow->end());
+    totalImpactedFlow->insert(deadFlow->begin(),deadFlow->end());
+
+    totalImpactedCoflow->insert(impactedCoflow->begin(),impactedCoflow->end());
+    totalImpactedCoflow->insert(secondImpactedCoflow->begin(),secondImpactedCoflow->end());
+    totalImpactedCoflow->insert(deadCoflow->begin(),deadCoflow->end());
+
     multipleSteadyLinkFailures->printFailures();
+
     cout<<"FinishedFlows: " << finishedFlowStats->size() << " AllFlows: " << totalFlows << endl;
     cout<<"FinishedCoflows: "<<cct->size()<<" AllCoflows: "<<coflowNum<<endl;
     //cout<<"AverageFlowThroughput: "<<frateAccm/totalFlows<<" AverageCCT: "<<cctSum/cct->size()<<endl;
     cout<<"ImpactedFlows: "<<impactedFlow->size()<<" ImpactedCoflows: "<<impactedCoflow->size();
-    set<int> distinctSecondImpactedCoflows(secondImpactedCoflow->begin(),secondImpactedCoflow->end());
-    cout<<" SecondImpactedFlows: "<<secondImpactedFlow->size()
-        <<" SecondImpactedCoFlows: "<<distinctSecondImpactedCoflows.size();
+    cout<<" TotalImpactedFlows: "<<totalImpactedFlow->size()
+        <<" TotalImpactedCoFlows: "<<totalImpactedCoflow->size();
     cout<<" DeadFlows: "<<deadFlow->size()<<" DeadCoflows: "<<deadCoflow->size()<<endl;
     double elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
     cout<<"Elapsed:" << elapsed_secs << "s" << endl;

@@ -1,7 +1,7 @@
 import sys
 
 #intensify coflow + filtering gigantic coflow
-def formatter(filename, timeScaleRatio, sizeFilter):
+def traceFilter(filename, timeScaleRatio, sizeFilter, count):
     with open('new'+filename,'w+') as wf:
         with open(sys.argv[1],'r') as rf:
             startingTime = -1
@@ -11,9 +11,11 @@ def formatter(filename, timeScaleRatio, sizeFilter):
                 if(len(items)>2):
                     mapperNum = int(items[2])
                     reducerNum = int(items[2+mapperNum+1])
-                    print(mapperNum, reducerNum)
-                    if(mapperNum+reducerNum <= int(sizeFilter)):
+                    if(mapperNum+reducerNum <= int(sizeFilter) and mapperNum+reducerNum >2):
+                        print(mapperNum, reducerNum)
                         coflowIndex += 1
+                        if(coflowIndex >= count):
+                            break
                         if(startingTime < 0 or int(items[1]) < startingTime):
                             startingTime = int(items[1])
                         items[1] = str((int(items[1])-startingTime)/int(timeScaleRatio))
@@ -43,5 +45,5 @@ def combineTwoNewTrace(file1, file2, newFile):
     f3.close()
 
 if __name__ == "__main__":
-    formatter(sys.argv[1], sys.argv[2], sys.argv[3])
+    traceFilter(sys.argv[1], sys.argv[2], sys.argv[3], 150)
     #combineTwoNewTrace(sys.argv[1], sys.argv[2], sys.argv[3])
