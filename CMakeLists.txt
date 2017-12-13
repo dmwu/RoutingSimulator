@@ -26,8 +26,7 @@ add_subdirectory(${SOURCE_FILES_FATTREE})
 add_subdirectory(${SOURCE_FILES_F10})
 add_subdirectory(${SOURCE_FILES_MPTCP})
 
-#add_executable(main main.cpp)
+add_executable(mainDynamic mainDynamic.cpp)
 add_executable(mainSteady mainSteady.cpp)
-#target_link_libraries (main LINK_PUBLIC mptcp f10 fattree)
-
+target_link_libraries (mainDynamic LINK_PUBLIC mptcp f10 fattree)
 target_link_libraries (mainSteady LINK_PUBLIC mptcp f10 fattree)

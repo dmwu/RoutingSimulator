@@ -101,8 +101,10 @@ void MultipleSteadyLinkFailures::setRandomSwitchFailure(double ratio, int pos) {
 
 void MultipleSteadyLinkFailures::updateBackupUsage() {
     multiset<int> *groupFailureCount = new multiset<int>();
+    set<int>* mappedSwitches = new set<int>();
     int gid = -1;
     for (int sid:*_givenFailedSwitches) {
+        mappedSwitches->insert(sid);
         if (sid < 2 * NK)
             gid = sid / (K / 2);
         else
@@ -118,34 +120,59 @@ void MultipleSteadyLinkFailures::updateBackupUsage() {
         int sid2 = ret.first->_switchId;
         assert(sid1 <= sid2);
         if (sid1 < 0) { //host link failure
+            if(mappedSwitches->count(sid2)>0)
+                continue;
+            mappedSwitches->insert(sid2);
             int gid2 = sid2 / (K / 2);
             if (groupFailureCount->count(gid2) < BACKUPS_PER_GROUP)
                 groupFailureCount->insert(gid2);
             else
                 _outstandingFailedLinks->insert(link);
+
+
         } else if (sid1 < NK) {
             //lp to up link failure
             assert(sid2 >= NK && sid2 < 2 * NK);
-            int gid1 = sid1 / (K / 2);
-            int gid2 = sid2 / (K / 2);
-            if (groupFailureCount->count(gid1) < BACKUPS_PER_GROUP
-                && groupFailureCount->count(gid2) < BACKUPS_PER_GROUP) {
-                groupFailureCount->insert(gid1);
-                groupFailureCount->insert(gid2);
-            } else
-                _outstandingFailedLinks->insert(link);
+            if (mappedSwitches->count(sid1) > 0 && mappedSwitches->count(sid2) > 0)
+                continue;
+            else if (mappedSwitches->count(sid1) == 0) {
+                mappedSwitches->insert(sid1);
+                int gid1 = sid1 / (K / 2);
+                if (groupFailureCount->count(gid1) < BACKUPS_PER_GROUP)
+                    groupFailureCount->insert(gid1);
+                else
+                    _outstandingFailedLinks->insert(link);
+            } else {
+                mappedSwitches->insert(sid2);
+                int gid2 = sid2 / (K / 2);
+                if (groupFailureCount->count(gid2) < BACKUPS_PER_GROUP)
+                    groupFailureCount->insert(gid2);
+                else
+                    _outstandingFailedLinks->insert(link);
+            }
+
 
         } else {
             // up to core link failure
             assert(sid1 < 2 * NK && sid2 >= 2 * NK);
-            int gid1 = sid1 / (K / 2);
-            int gid2 = 2 * K + (sid2 - 2 * NK) % (K / 2);
-            if (groupFailureCount->count(gid1) < BACKUPS_PER_GROUP
-                && groupFailureCount->count(gid2) < BACKUPS_PER_GROUP) {
-                groupFailureCount->insert(gid1);
-                groupFailureCount->insert(gid2);
-            } else
-                _outstandingFailedLinks->insert(link);
+
+            if (mappedSwitches->count(sid1) > 0 && mappedSwitches->count(sid2) > 0)
+                continue;
+            else if (mappedSwitches->count(sid1) == 0) {
+                mappedSwitches->insert((sid1));
+                int gid1 = sid1 / (K / 2);
+                if (groupFailureCount->count(gid1) < BACKUPS_PER_GROUP)
+                    groupFailureCount->insert(gid1);
+                else
+                    _outstandingFailedLinks->insert(link);
+            } else {
+                mappedSwitches->insert(sid2);
+                int gid2 = 2 * K + (sid2 - 2 * NK) % (K / 2);
+                if (groupFailureCount->count(gid2) < BACKUPS_PER_GROUP)
+                    groupFailureCount->insert(gid2);
+                else
+                    _outstandingFailedLinks->insert(link);
+            }
         }
 
     }
