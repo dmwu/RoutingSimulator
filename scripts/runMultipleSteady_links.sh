@@ -2,26 +2,33 @@
 cd ../cmake-build-debug
 cmake ..
 make clean;make
-declare -a arr=("perm_K16Ratio4server4096" "perm_K16Ratio10server10240" "a2rack_K16Raio4RackSize32" "a2rack_K16Raio10RackSize80")
-for trace in "${arr[@]}"
+declare -a ratio4trace=("newfb_10min_1")
+declare -a ratio10trace=("perm_K16Ratio10server10240" "a2rack_K16Ratio10RackSize80")
+
+for trace in "${ratio4trace[@]}"
     do
     for top in 0 1 2
         do
-        for linkNum in 0 1 3 5 10
+        for linkNum in 1 3 5 10 20
             do
-            for trial in 1 2
+            for pos in 0 1 2
                 do
-                fileName="top_"${top}"_linkNum_"${linkNum}"_trial_"${trial}"_"${trace}".temp"
-                ./mainSteady -topo ${top} -routing 1 -linkNum ${linkNum}  -switchNum 0 ../trafficTraces/${trace} > ${fileName}
+                for trial in 1 2 3
+                    do
+                    fileName="top_"${top}"_linkNum_"${linkNum}"pos"${pos}"_trial_"${trial}"_"${trace}".temp"
+                    ./mainSteady -topo ${top} -routing 0 -linkNum ${linkNum}  -switchNum 0 -failurePos ${pos} -trafficLevel 1 -trial ${trial} ../trafficTraces/${trace} > ${fileName} &
+                done
             done
         done
     done
 
-    resultFilename="final_links_"${trace}".res"
-    for entry in ./*${trace}".temp"
+    wait
+    now=$(date +"%m_%d_%Y")
+    linkFilename="final_links_"${trace}${now}".impact"
+    for entry in ./*"link"*${trace}".temp"
         do
-        cat ${entry} >> ${resultFilename}
-        echo "" >> ${resultFilename}
+        cat ${entry} >> ${linkFilename}
+        echo "" >> ${linkFilename}
     done
+    rm *.temp
 done
-
