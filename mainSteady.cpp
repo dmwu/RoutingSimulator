@@ -69,11 +69,20 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
     return cct;
 }
 
-string getCCTFileName(int topology, int routing, int pos, int linkNum, int switchNum, string trace){
+string getCCTFileName(int topology, int routing, int pos, int linkNum, int switchNum, string trace, int trial){
     stringstream file;
-    file<<"top"<<topology<<"rt"<<routing<<"_"<<GLOBAL_LOAD_BALANCING<<"pos"<<pos<<"l"<<linkNum<<"s"<<switchNum<<"_"<<trace<<".cct";
+    file<<"top"<<topology<<"rt"<<routing<<"_"<<GLOBAL_LOAD_BALANCING
+        <<"pos"<<pos<<"l"<<linkNum<<"s"<<switchNum<<"_"<<trace<<"_"<<trial<<".cct";
     return file.str();
 }
+
+string getFCTFileName(int topology, int routing, int pos, int linkNum, int switchNum, string trace, int trial){
+    stringstream file;
+    file<<"top"<<topology<<"rt"<<routing<<"_"<<GLOBAL_LOAD_BALANCING
+        <<"pos"<<pos<<"l"<<linkNum<<"s"<<switchNum<<"_"<<trace<<"_"<<trial<<".fct";
+    return file.str();
+}
+
 EventList eventlist;
 
 void fileNotFoundError(string fn){
@@ -117,6 +126,7 @@ int main(int argc, char **argv) {
     int failedLinkNum = 0;
     int failedSwitchNum = 0;
     int trafficLevel = 0; //0 stands for server level; 1 stands for rack level
+    int trial = 0;
     string traf_file_name;
     if (argc > 1) {
         int i = 1;
@@ -143,10 +153,17 @@ int main(int argc, char **argv) {
             i += 2;
         }
 
+
         if (argc > i && !strcmp(argv[i], "-trafficLevel")) {
             trafficLevel = atoi(argv[i + 1]);
             i += 2;
         }
+
+        if (argc > i && !strcmp(argv[i], "-trial")) {
+            trial= atoi(argv[i + 1]);
+            i += 2;
+        }
+
         traf_file_name = argv[i];
     } else {
         cout << "wrong arguments!" << endl;
@@ -154,10 +171,15 @@ int main(int argc, char **argv) {
     }
 
     cout<<"Topology: "<<topology<<" routing: "<<routing<<" failurePos: "
-        <<failureLocation<<" trafficLevel: "<<trafficLevel<<" K: "<<K<<endl;
+        <<failureLocation<<" trafficLevel: "<<trafficLevel<<" trial:"<<trial<<" K: "<<K<<endl;
 
     string traceName = traf_file_name.substr(traf_file_name.rfind("/")+1);
-    string cctLogFilename =getCCTFileName(topology,routing, failureLocation, failedLinkNum,failedSwitchNum,traceName);
+
+    string cctLogFilename
+            =getCCTFileName(topology, routing, failureLocation, failedLinkNum,failedSwitchNum,traceName, trial);
+
+    string fctLogFilename
+            = getFCTFileName(topology, routing, failureLocation, failedLinkNum,failedSwitchNum,traceName, trial);
 
 #if PRINT_PATHS
     filename << "logs.paths";
@@ -283,20 +305,26 @@ int main(int argc, char **argv) {
     while (eventlist.doNextEvent()) {
 
     }
-    double frateAccm = 0,cctSum = 0;
     std::ofstream cctLogFile(cctLogFilename.c_str());
+    std::ofstream fctLogFile(fctLogFilename.c_str());
     assert(cctLogFile.is_open());
+    assert(fctLogFile.is_open());
+
     for (pair<int,FlowConnection*>it: *finishedFlowStats) {
-        if(deadFlow->count(it.first) == 0) {
-            double rate = (it.second->_flowSize_Bytes / 1e6) * 8 / (it.second->_duration_ms / 1e3); //in Mbps
-            frateAccm+= rate;
-        }
+            fctLogFile<<it.first<<" "<<it.second->_duration_ms<<endl;
     }
+
+    for( int superId: *deadFlow){
+        fctLogFile<<superId<<" "<<INT32_MAX<<endl;
+    }
+
     map<int, double>* cct = getCoflowStats(finishedFlowStats,deadCoflow);
     for(pair<int,double> it:*cct){
-            cctSum += it.second;
             cctLogFile<<it.first<<" "<<it.second<<endl;
     }
+
+    fctLogFile.flush();
+    fctLogFile.close();
     cctLogFile.flush();
     cctLogFile.close();
 
