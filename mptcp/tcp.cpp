@@ -456,6 +456,7 @@ TcpSrc::retransmit_packet() {
 }
 
 void TcpSrc::rtx_timer_hook(simtime_picosec now, simtime_picosec period) {
+    //cout<<this->_cwnd<<endl;
     if (now <= _RFC2988_RTO_timeout || _RFC2988_RTO_timeout == timeInf) return;
 
     if (_highest_sent == 0) return;

@@ -69,9 +69,9 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
     return cct;
 }
 
-string getCCTFileName(int topology, int pos, int linkNum, int switchNum, string trace){
+string getCCTFileName(int topology, int routing, int pos, int linkNum, int switchNum, string trace){
     stringstream file;
-    file<<"top"<<topology<<"_"<<GLOBAL_LOAD_BALANCING<<"pos"<<pos<<"l"<<linkNum<<"s"<<switchNum<<trace<<".cct";
+    file<<"top"<<topology<<"rt"<<routing<<"_"<<GLOBAL_LOAD_BALANCING<<"pos"<<pos<<"l"<<linkNum<<"s"<<switchNum<<"_"<<trace<<".cct";
     return file.str();
 }
 EventList eventlist;
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
         <<failureLocation<<" trafficLevel: "<<trafficLevel<<" K: "<<K<<endl;
 
     string traceName = traf_file_name.substr(traf_file_name.rfind("/")+1);
-    string cctLogFilename =getCCTFileName(topology,failureLocation, failedLinkNum,failedSwitchNum,traceName);
+    string cctLogFilename =getCCTFileName(topology,routing, failureLocation, failedLinkNum,failedSwitchNum,traceName);
 
 #if PRINT_PATHS
     filename << "logs.paths";

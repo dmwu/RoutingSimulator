@@ -31,16 +31,16 @@
 
 #define SWITCH_BUFFER 10
 #define RANDOM_BUFFER 0
-#define FEEDER_BUFFER 100000 //100MB, feeder queue shouldn't be the bottleneck
+#define FEEDER_BUFFER 1000000 //1GB, feeder queue shouldn't be the bottleneck
 
 #define BACKUPS_PER_GROUP 1
 
 #define LOCAL_REROUTE_DELAY 2 //ms
 #define GLOBAL_REROUTE_DELAY 65 //ms
-#define CIRCUIT_SWITCHING_DELAY 10 //ms
-#define TCP_TIMEOUT_SCANNER_PERIOD 1 //ms
+#define CIRCUIT_SWITCHING_DELAY 2 //ms
+#define TCP_TIMEOUT_SCANNER_PERIOD 0.05 //ms
 
-#define GLOBAL_LOAD_BALANCING 0
+#define GLOBAL_LOAD_BALANCING 1
 
 #endif
 
