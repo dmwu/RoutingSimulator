@@ -170,8 +170,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    cout<<"Topology: "<<topology<<" routing: "<<routing<<" failurePos: "
-        <<failureLocation<<" trafficLevel: "<<trafficLevel<<" trial:"<<trial<<" K: "<<K<<endl;
+    cout<<"Topology:"<<topology<<" routing:"<<routing<<" failurePos:"
+        <<failureLocation<<" trafficLevel:"<<trafficLevel<<" trial:"<<trial<<" K:"<<K<<endl;
 
     string traceName = traf_file_name.substr(traf_file_name.rfind("/")+1);
 

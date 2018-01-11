@@ -151,7 +151,6 @@ void MultipleSteadyLinkFailures::updateBackupUsage() {
                     _outstandingFailedLinks->insert(link);
             }
 
-
         } else {
             // up to core link failure
             assert(sid1 < 2 * NK && sid2 >= 2 * NK);
@@ -174,7 +173,6 @@ void MultipleSteadyLinkFailures::updateBackupUsage() {
                     _outstandingFailedLinks->insert(link);
             }
         }
-
     }
 }
 
