@@ -156,7 +156,7 @@ void TcpSrc::setFlowCounter(set<int> *imf, set<int> *imc, set<int> *sf, set<int>
 
 void TcpSrc::setupConnection() {
     pair<route_t *, route_t *> path;
-    path = _topo->getStandardPath(_src, _dest);
+    path = _topo->getEcmpPath(_src, _dest);
 
     if (!_topo->isPathValid(path.first) || !_topo->isPathValid(path.second)) {
         impactedFlow->insert(_superId);

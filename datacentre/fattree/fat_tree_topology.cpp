@@ -580,7 +580,7 @@ void FatTreeTopology::recoverLink(int linkid) {
 }
 
 pair<route_t *, route_t *> FatTreeTopology::getStandardPath(int src, int dest) {
-    //[WDM] note that for two-level routing, ack packets may go a different path than the data packets
+    //[WDM] note that for two-level routing, ack packets may go through a different path than the data packets
     // here we assume that ACK always goes exactly the same path of data packets, just in opposite direction
     route_t *path = get_path_2levelrt(src, dest);
     route_t *ackPath = getReversePath(src, dest, path);
