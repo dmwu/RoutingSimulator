@@ -18,7 +18,7 @@ for trace in "${ratio4trace[@]}"
                 for trial in 1
                     do
                     fileName="top_"${top}"_linkNum_"${linkNum}"pos"${pos}"_trial_"${trial}"_"${trace}".temp"
-                    ./mainSteady -topo ${top} -routing 0 -linkNum ${linkNum}  -switchNum 0 -failurePos ${pos} -trafficLevel 0 -trial ${trial} ../trafficTraces/${trace} > ${fileName} &
+                    ./mainSteady -topo ${top} -routing 0 -linkNum ${linkNum}  -switchNum 0 -failurePos ${pos} -trafficLevel 1 -trial ${trial} ../trafficTraces/${trace} > ${fileName} &
                 done
             done
         done
