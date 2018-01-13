@@ -378,11 +378,13 @@ route_t *F10Topology::getAlternativePath(int src, int dest, route_t *dataPath) {
         int destTorIndex = failedSwitch;
         int aggSwitchIndex = dualSwitch - NK;
         int pod = HOST_POD(dest);
-        for (int tor = MIN_POD_ID(pod); tor <= MAX_POD_ID(pod) && tor != destTorIndex; tor++) {
-            for (int upper = MIN_POD_ID(pod); upper <= MAX_POD_ID(pod) && upper != aggSwitchIndex; upper++) {
-                if (!queues_nup_nlp[aggSwitchIndex][tor]->_disabled
-                    && !queues_nlp_nup[tor][upper]->_disabled
-                    && !queues_nup_nlp[upper][destTorIndex]->_disabled) {
+        for (int tor = MIN_POD_ID(pod); tor <= MAX_POD_ID(pod); tor++) {
+            for (int upper = MIN_POD_ID(pod); upper <= MAX_POD_ID(pod); upper++) {
+                if (    !queues_nup_nlp[aggSwitchIndex][tor]->_disabled
+                        && !queues_nlp_nup[tor][upper]->_disabled
+                        && !queues_nup_nlp[upper][destTorIndex]->_disabled
+                        && tor != destTorIndex
+                        && upper != aggSwitchIndex) {
                     routeout = new route_t(dataPath->begin(), dataPath->begin() + failurePos - 2 + 1);
                     routeout->push_back(pipes_nup_nlp[aggSwitchIndex][tor]);
                     routeout->push_back(queues_nup_nlp[aggSwitchIndex][tor]);
@@ -487,7 +489,6 @@ pair<route_t *, route_t *> F10Topology::getReroutingPath(int src, int dest, rout
     route_t* path = getAlternativePath(src, dest, currentPath);
     route_t *ackPath = getReversePath(src, dest, path);
     return make_pair(path, ackPath);
-
 
 }
 
