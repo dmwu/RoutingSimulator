@@ -10,7 +10,7 @@ for trace in "${ratio4trace[@]}"
     for top in 0 1 2
         do
         fileName="top_"${top}"_switch_reference"${trace}".temp"
-        ./mainSteady -topo ${top} -routing 0 -linkNum 0  -switchNum 0 -failurePos 0 -trafficLevel 0 -trial 1 ../trafficTraces/${trace} > ${fileName} &
+        ./mainSteady -topo ${top} -routing 0 -linkNum 0  -switchNum 0 -failurePos 0 -trafficLevel 1 -trial 1 ../trafficTraces/${trace} > ${fileName} &
         for switchNum in 1 2 3 4 5
             do
             for pos in 0 1 2
