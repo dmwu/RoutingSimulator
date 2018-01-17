@@ -184,7 +184,7 @@ void TcpSrc::setupConnection() {
         routeBack->push_back(this);
         _sink->connect(*this, *routeBack);
         Topology::addFlowToPath(_superId, _coflowID, _route);
-        if(_singleLinkFailureEvent->isPathOverlapping(_route))
+        if(_singleLinkFailureEvent && _singleLinkFailureEvent->isPathOverlapping(_route))
             _singleLinkFailureEvent->registerConnection(this);
     }
 }
@@ -686,7 +686,8 @@ void TcpSrc::handleFlowCompletion() {
     fc->_coflowId = _coflowID;
     _flowStats->insert(pair<int, FlowConnection *>(_superId, fc));
     Topology::removeFlowFromPath(_superId, _coflowID, _route);
-    _singleLinkFailureEvent->removeConnection(this);
+    if(_singleLinkFailureEvent)
+        _singleLinkFailureEvent->removeConnection(this);
     //Topology::printPath(cout, _route);
 }
 
@@ -697,7 +698,8 @@ void TcpSrc::handleFlowDeath() {
     deadCoflow->insert(_coflowID);
     deadFlow->insert(_superId);
     Topology::removeFlowFromPath(_superId, _coflowID, _route);
-    _singleLinkFailureEvent->removeConnection(this);
+    if(_singleLinkFailureEvent)
+        _singleLinkFailureEvent->removeConnection(this);
 }
 
 void TcpSrc::handleFlowRerouting(route_t* newPath) {
