@@ -41,7 +41,6 @@
 #define TCP_TIMEOUT_SCANNER_PERIOD 0.05 //ms
 
 #define GLOBAL_LOAD_BALANCING 1
-#define Routing 1 //0->ecmp; 1->standard
 
 #endif
 

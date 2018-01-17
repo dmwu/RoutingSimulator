@@ -139,10 +139,11 @@ void TcpSrc::connect(route_t &routeout, route_t &routeback, TcpSink &sink, simti
     _sink->connect(*this, routeback);
 }
 
-void TcpSrc::installTcp(Topology *topo, SingleDynamicLinkFailureEvent* singleLinkFailureEvent) {
+void TcpSrc::installTcp(Topology *topo, SingleDynamicLinkFailureEvent* singleLinkFailureEvent, int rt) {
     _topo = topo;
     _singleLinkFailureEvent = singleLinkFailureEvent;
     eventlist().sourceIsPending(*this, timeFromMs(_flow_start_time_ms));
+    _routing = rt;
 }
 
 void TcpSrc::setFlowCounter(set<int> *imf, set<int> *imc, set<int> *sf, set<int> *sc, set<int> *df, set<int> *dc,
@@ -158,7 +159,7 @@ void TcpSrc::setFlowCounter(set<int> *imf, set<int> *imc, set<int> *sf, set<int>
 
 void TcpSrc::setupConnection() {
     pair<route_t *, route_t *> path;
-    if(Routing)
+    if(_routing) //0->ecmp; 1->standard
         path = _topo->getStandardPath(_src,_dest);
     else
         path = _topo->getEcmpPath(_src, _dest);

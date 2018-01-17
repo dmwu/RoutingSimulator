@@ -37,7 +37,7 @@ public:
     TcpSrc(TcpSink*sink, int src, int dest, EventList &eventlist, uint64_t volume, double start_ms, int super_id, int coflowId);
 
     virtual void connect(route_t &routeout, route_t &routeback, TcpSink &sink, simtime_picosec startTime_ps);
-    void installTcp(Topology* topo, SingleDynamicLinkFailureEvent*);
+    void installTcp(Topology* topo, SingleDynamicLinkFailureEvent*,int rt);
     void setupConnection();
 
     void startflow();
@@ -51,7 +51,7 @@ public:
     set<int>* deadFlow;
     set<int>* secondImpactedFlow;
     set<int>* secondImpactedCoflow;
-
+    int _routing = 1;
     void setFlowCounter(set<int>* imf, set<int>*imc,set<int>*sf, set<int>*sc,set<int>*df, set<int>*dc,  map<int,FlowConnection*>* flowStats);
     virtual void doNextEvent();
 

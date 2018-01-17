@@ -284,7 +284,7 @@ int main(int argc, char **argv) {
                 tcpSnk->set_super_id(flowId);
 
                 tcpSrc->setFlowCounter(impactedFlow,impactedCoflow,secondImpactedFlow,secondImpactedCoflow,deadFlow,deadCoflow,finishedFlowStats);
-                tcpSrc->installTcp(top,linkFailureEvent);
+                tcpSrc->installTcp(top,linkFailureEvent,routing);
                 tcpRtxScanner.registerTcp(*tcpSrc);
                 flowId++;
 
