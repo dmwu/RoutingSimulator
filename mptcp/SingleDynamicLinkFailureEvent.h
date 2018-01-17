@@ -8,28 +8,12 @@
 
 #include "eventlist.h"
 #include "topology.h"
-#include "tcp.h"
 #include "queue.h"
 #include "../main.h"
+#include "FlowConnection.h"
 
 typedef vector<PacketSink*> route_t;
-class FlowConnection{
-public:
-    FlowConnection(TcpSrc* tcpSrc, TcpSink* tcpSink, int superID, int src, int dest, uint32_t fs, uint32_t arrivalTime_ms);
-    FlowConnection(TcpSrc*, TcpSink*, int, int);
-    TcpSrc* _tcpSrc;
-    TcpSink* _tcpSink;
-    int _src;
-    int _dest;
-    int _superId;
-    int _coflowId;
-    double _throughput=-1;
-    uint32_t _flowSize_Bytes;
-    uint32_t _arrivalTimeMs;
-    uint32_t _completionTimeMs=-1;
-    uint32_t _duration_ms=-1;
 
-};
 enum LinkState {GOOD, WAITING_REROUTING, BAD, WAITING_RECOVER};
 
 class SingleDynamicLinkFailureEvent: public EventSource {
@@ -42,7 +26,6 @@ public:
     void installEvent();
     void setFailureRecoveryDelay(simtime_picosec setupReroutingDelay, simtime_picosec pathRestoreDelay);
     void setTopology(Topology*);
-    double getThroughputOfImpactedFlows(map<int,FlowConnection*>* flowStats);
     void doNextEvent();
     simtime_picosec _startFrom;
     simtime_picosec _failureTime;
@@ -51,8 +34,9 @@ public:
     bool UsingShareBackup = false;
     int _linkid;
     simtime_picosec _setupReroutingDelay, _pathRestoreDelay;
-    vector<FlowConnection*>* _connections;
-    void registerConnection(FlowConnection* fc);
+    set<TcpSrc*>* _connections;
+    void registerConnection(TcpSrc* fc);
+    void removeConnection(TcpSrc* fc);
     bool isPathOverlapping(route_t*);
     vector<int>* lpBackupUsageTracker;
     vector<int>* upBackupUsageTracker;
@@ -61,6 +45,8 @@ public:
     int* _group2;
     void setBackupUsageTracker(vector<int>* lp, vector<int>*up, vector<int>* core);
     int getNumImpactedCoflow(map<int,double>*coflowStats);
+
+
 private:
     void rerouting();
     bool hasEnoughBackup();

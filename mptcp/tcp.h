@@ -12,6 +12,7 @@
 #include "network.h"
 #include "tcppacket.h"
 #include "eventlist.h"
+
 #define timeInf 0
 //#define PACKET_SCATTER 1
 
@@ -23,7 +24,10 @@ class MultipathTcpSrc;
 
 class MultipathTcpSink;
 
+class SingleDynamicLinkFailureEvent;
+
 class FlowConnection;
+
 class TcpSrc : public PacketSink, public EventSource {
     friend class TcpSink;
 
@@ -33,7 +37,7 @@ public:
     TcpSrc(TcpSink*sink, int src, int dest, EventList &eventlist, uint64_t volume, double start_ms, int super_id, int coflowId);
 
     virtual void connect(route_t &routeout, route_t &routeback, TcpSink &sink, simtime_picosec startTime_ps);
-    void installTcp(Topology* topo);
+    void installTcp(Topology* topo, SingleDynamicLinkFailureEvent*);
     void setupConnection();
 
     void startflow();
@@ -57,6 +61,9 @@ public:
 
     uint32_t effective_window();
     void handleFlowCompletion();
+    void handleFlowDeath();
+    void handleFlowRerouting(route_t*);
+    void handleImpactedFlow();
 
     virtual void rtx_timer_hook(simtime_picosec now, simtime_picosec period);
     virtual PacketSink* getDual(){perror("no dual for TcpSrc");return NULL ;}
@@ -105,6 +112,7 @@ public:
 
     uint32_t _drops;
 
+    SingleDynamicLinkFailureEvent* _singleLinkFailureEvent;
     TcpSink *_sink;
     MultipathTcpSrc *_mSrc;
     simtime_picosec _RFC2988_RTO_timeout;

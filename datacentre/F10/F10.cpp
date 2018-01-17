@@ -304,7 +304,6 @@ route_t *F10Topology::get_path_2levelrt(int src, int dest) {
 
         routeout->push_back(pipes_nlp_ns[HOST_POD_SWITCH(dest)][dest]);
 
-
     } else {
 
         int pod1 = HOST_POD(src);

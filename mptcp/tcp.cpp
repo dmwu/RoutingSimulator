@@ -1,8 +1,9 @@
 #include "tcp.h"
 #include "mtcp.h"
 #include "topology.h"
-#include "SingleDynamicLinkFailureEvent.h"
 #include <iostream>
+#include "SingleDynamicLinkFailureEvent.h"
+#include "FlowConnection.h"
 
 ////////////////////////////////////////////////////////////////
 //  TCP SOURCE
@@ -138,8 +139,9 @@ void TcpSrc::connect(route_t &routeout, route_t &routeback, TcpSink &sink, simti
     _sink->connect(*this, routeback);
 }
 
-void TcpSrc::installTcp(Topology *topo) {
+void TcpSrc::installTcp(Topology *topo, SingleDynamicLinkFailureEvent* singleLinkFailureEvent) {
     _topo = topo;
+    _singleLinkFailureEvent = singleLinkFailureEvent;
     eventlist().sourceIsPending(*this, timeFromMs(_flow_start_time_ms));
 }
 
@@ -156,28 +158,24 @@ void TcpSrc::setFlowCounter(set<int> *imf, set<int> *imc, set<int> *sf, set<int>
 
 void TcpSrc::setupConnection() {
     pair<route_t *, route_t *> path;
-    path = _topo->getEcmpPath(_src, _dest);
+    if(Routing)
+        path = _topo->getStandardPath(_src,_dest);
+    else
+        path = _topo->getEcmpPath(_src, _dest);
 
     if (!_topo->isPathValid(path.first) || !_topo->isPathValid(path.second)) {
-        impactedFlow->insert(_superId);
-        impactedCoflow->insert(_coflowID);
-
+        handleImpactedFlow();
         route_t *curPath = path.first;
         path = _topo->getReroutingPath(_src, _dest, curPath);
 
         if (!_topo->isPathValid(path.first) || !_topo->isPathValid(path.second)) {
             //cout<<"no path available for:"<<src<<"->"<<dest<<endl;
-            deadCoflow->insert(_coflowID);
-            deadFlow->insert(_superId);
-            _flow_finish = true;
+            handleFlowDeath();
             return;
+        }else{
+            handleFlowRerouting(path.first);
         }
 
-        for (unsigned i = 1; i < path.first->size()-1; i += 2) {
-            Pipe *pipe = (Pipe *) path.first->at(i);
-            secondImpactedFlow->insert(pipe->_flowTracker->begin(), pipe->_flowTracker->end());
-            secondImpactedCoflow->insert(pipe->_coflowTracker->begin(), pipe->_coflowTracker->end());
-        }
     }
     if(!_flow_finish) {
         _route = new route_t(*(path.first));
@@ -186,6 +184,8 @@ void TcpSrc::setupConnection() {
         routeBack->push_back(this);
         _sink->connect(*this, *routeBack);
         Topology::addFlowToPath(_superId, _coflowID, _route);
+        if(_singleLinkFailureEvent->isPathOverlapping(_route))
+            _singleLinkFailureEvent->registerConnection(this);
     }
 }
 
@@ -676,11 +676,9 @@ void TcpSrc::handleFlowCompletion() {
     double duration_ms = (eventlist().now() / 1e9) - _flow_start_time_ms;
     double endToEndLossRate = (_packets_sent - _sink->_packets) * 1.0 / _packets_sent;
     double rate = (_flow_volume_bytes / 1e6) * 8 / (duration_ms / 1e3); //in Mbps
-//    cout << "coflow:" << _coflowID << " " << (*_route)[0]->_gid << "->" << (*_route)[_route->size() - 2]->_gid
-//         << " flowSize:" << _flow_volume_bytes << " superId:" <<
-//         _superId << " compTime(ms):" << duration_ms << " rate(Mbps):" << rate << " e2eLossRate:" << endToEndLossRate
-//         << " rtx_rto:" << _retransmitCountTimeOut << " rtx_fast:" << _retransmitCountFastRecover << endl;
-    FlowConnection *fc = new FlowConnection(this, (TcpSink *) _route->back(), _superId, _src, _dest,
+    cout <<eventlist().now()/1e9<<" [Finish] coflow:" << _coflowID <<" superId:"<<_superId
+         <<" "<<_src << "->" << _dest <<" duration:"<<duration_ms<<endl;
+    FlowConnection *fc = new FlowConnection(this, _superId, _src, _dest,
                                             _flow_volume_bytes, _flow_start_time_ms);
     fc->_completionTimeMs = eventlist().now() / 1e9;
     fc->_duration_ms = duration_ms;
@@ -688,5 +686,31 @@ void TcpSrc::handleFlowCompletion() {
     fc->_coflowId = _coflowID;
     _flowStats->insert(pair<int, FlowConnection *>(_superId, fc));
     Topology::removeFlowFromPath(_superId, _coflowID, _route);
+    _singleLinkFailureEvent->removeConnection(this);
     //Topology::printPath(cout, _route);
+}
+
+void TcpSrc::handleFlowDeath() {
+    _flow_finish = true;
+    cout <<eventlist().now()/1e9<<" [Death] coflow:"
+         << _coflowID <<" "<<"superId:"<<_superId<<" "<<_src << "->" << _dest <<endl;
+    deadCoflow->insert(_coflowID);
+    deadFlow->insert(_superId);
+    Topology::removeFlowFromPath(_superId, _coflowID, _route);
+    _singleLinkFailureEvent->removeConnection(this);
+}
+
+void TcpSrc::handleFlowRerouting(route_t* newPath) {
+    cout <<eventlist().now()/1e9<<" [Rerouting] coflow:" << _coflowID
+         <<" "<<"superId:"<<_superId<<" "<<_src << "->" << _dest <<endl;
+    for (unsigned i = 1; i < newPath->size()-1; i += 2) {
+        Pipe *pipe = (Pipe *) newPath->at(i);
+        secondImpactedFlow->insert(pipe->_flowTracker->begin(), pipe->_flowTracker->end());
+        secondImpactedCoflow->insert(pipe->_coflowTracker->begin(), pipe->_coflowTracker->end());
+    }
+}
+
+void TcpSrc::handleImpactedFlow() {
+    impactedFlow->insert(_superId);
+    impactedCoflow->insert(_coflowID);
 }
