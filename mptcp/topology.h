@@ -5,6 +5,7 @@
 #include "network.h"
 #include "queue.h"
 #include "pipe.h"
+#include "../main.h"
 
 typedef vector<PacketSink *> route_t;
 
@@ -98,6 +99,11 @@ public:
         return s.str();
     }
 
+    static double getLoad(double lastArrivalTime, double TrafficVolumeBytes){
+        double totalLinks = K/2*K/2*K*2;
+        double timeSec = TrafficVolumeBytes*8*3.0/(1.0*1e9*totalLinks);
+        return timeSec*1000.0/lastArrivalTime;
+    }
 };
 
 #endif

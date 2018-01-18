@@ -8,7 +8,7 @@
 
 class FlowConnection{
 public:
-    FlowConnection(TcpSrc* tcpSrc, int superID, int src, int dest, uint32_t fs, uint32_t arrivalTime_ms);
+    FlowConnection(TcpSrc* tcpSrc, int superID, int src, int dest, uint64_t fs, double arrivalTime_ms);
     FlowConnection(TcpSrc*, int, int);
     TcpSrc* _tcpSrc;
     int _src;
@@ -16,10 +16,10 @@ public:
     int _superId;
     int _coflowId;
     double _throughput=-1;
-    uint32_t _flowSize_Bytes;
-    uint32_t _arrivalTimeMs;
-    uint32_t _completionTimeMs=-1;
-    uint32_t _duration_ms=-1;
+    uint64_t _flowSize_Bytes;
+    double _arrivalTimeMs;
+    double _completionTimeMs=-1;
+    double _duration_ms=-1;
 
 };
 

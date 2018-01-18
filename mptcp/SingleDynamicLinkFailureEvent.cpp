@@ -76,7 +76,8 @@ void SingleDynamicLinkFailureEvent::setStartEndTime(simtime_picosec startFrom, s
 }
 
 void SingleDynamicLinkFailureEvent::installEvent() {
-    this->eventlist().sourceIsPending(*this, _startFrom);
+    if(_linkid>=0)
+        this->eventlist().sourceIsPending(*this, _startFrom);
 }
 
 void SingleDynamicLinkFailureEvent::setFailureRecoveryDelay(simtime_picosec setupReroutingDelay, simtime_picosec pathRestoreDelay) {
@@ -200,6 +201,9 @@ void SingleDynamicLinkFailureEvent::rerouting(){
 
 
 bool SingleDynamicLinkFailureEvent::isPathOverlapping(route_t *path) {
+    if(_linkid <0 )
+        return false;
+
     pair<Queue *, Queue *> queues = _topo->linkToQueues(_linkid);
     Queue *first = queues.first;
     Queue *second = queues.second;

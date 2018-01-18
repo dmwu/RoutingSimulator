@@ -11,7 +11,7 @@
 #define RTT 10 // Identical RTT microseconds = 0.01 ms [WDM] I change it to 10us to match the link speed.
 // FAT
 #define K 16
-#define RATIO 4
+#define RATIO 1
 #define NSW K*K*5/4
 #define NHOST (K*K*K*RATIO/4)
 

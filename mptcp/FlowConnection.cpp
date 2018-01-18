@@ -4,8 +4,8 @@
 
 #include "FlowConnection.h"
 
-FlowConnection::FlowConnection(TcpSrc *tcpSrc,  int sid, int src, int dest, uint32_t fs,
-                               uint32_t arrivalTime_ms) : _tcpSrc(tcpSrc),
+FlowConnection::FlowConnection(TcpSrc *tcpSrc,  int sid, int src, int dest, uint64_t fs,
+                               double arrivalTime_ms) : _tcpSrc(tcpSrc),
                                                           _src(src), _dest(dest),_superId(sid),
                                                           _flowSize_Bytes(fs), _arrivalTimeMs(arrivalTime_ms)
 {}

@@ -677,8 +677,8 @@ void TcpSrc::handleFlowCompletion() {
     double duration_ms = (eventlist().now() / 1e9) - _flow_start_time_ms;
     double endToEndLossRate = (_packets_sent - _sink->_packets) * 1.0 / _packets_sent;
     double rate = (_flow_volume_bytes / 1e6) * 8 / (duration_ms / 1e3); //in Mbps
-    cout <<eventlist().now()/1e9<<" [Finish] coflow:" << _coflowID <<" superId:"<<_superId
-         <<" "<<_src << "->" << _dest <<" duration:"<<duration_ms<<endl;
+    //cout <<eventlist().now()/1e9<<" [Finish] coflow:" << _coflowID <<" superId:"<<_superId
+    //     <<" "<<_src << "->" << _dest <<" duration:"<<duration_ms<<endl;
     FlowConnection *fc = new FlowConnection(this, _superId, _src, _dest,
                                             _flow_volume_bytes, _flow_start_time_ms);
     fc->_completionTimeMs = eventlist().now() / 1e9;
@@ -694,8 +694,8 @@ void TcpSrc::handleFlowCompletion() {
 
 void TcpSrc::handleFlowDeath() {
     _flow_finish = true;
-    cout <<eventlist().now()/1e9<<" [Death] coflow:"
-         << _coflowID <<" "<<"superId:"<<_superId<<" "<<_src << "->" << _dest <<endl;
+    //cout <<eventlist().now()/1e9<<" [Death] coflow:"
+     //    << _coflowID <<" "<<"superId:"<<_superId<<" "<<_src << "->" << _dest <<endl;
     deadCoflow->insert(_coflowID);
     deadFlow->insert(_superId);
     Topology::removeFlowFromPath(_superId, _coflowID, _route);
@@ -704,8 +704,8 @@ void TcpSrc::handleFlowDeath() {
 }
 
 void TcpSrc::handleFlowRerouting(route_t* newPath) {
-    cout <<eventlist().now()/1e9<<" [Rerouting] coflow:" << _coflowID
-         <<" "<<"superId:"<<_superId<<" "<<_src << "->" << _dest <<endl;
+    //cout <<eventlist().now()/1e9<<" [Rerouting] coflow:" << _coflowID
+    //     <<" "<<"superId:"<<_superId<<" "<<_src << "->" << _dest <<endl;
     for (unsigned i = 1; i < newPath->size()-1; i += 2) {
         Pipe *pipe = (Pipe *) newPath->at(i);
         secondImpactedFlow->insert(pipe->_flowTracker->begin(), pipe->_flowTracker->end());

@@ -56,7 +56,7 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
         if(deadCoflows->count(cid)>0)
             (*cct)[cid] = INT32_MAX;
         else {
-            int duration = it.second->_duration_ms;
+            double duration = it.second->_duration_ms;
             if (cct->count(cid) == 0 || cct->at(cid) < duration)
                 (*cct)[cid] = duration;
         }
@@ -103,8 +103,11 @@ int main(int argc, char **argv) {
     std::srand (time(0));
 
     int totalFlows = 0;
-    int failureStartingTime = 1;
+    int failureStartingTime = 0;
     int failureDuration = 300;
+
+    double totalTrafficBytes = 0;
+    double lastArrivalTime =0;
 
     set<int>* impactedCoflow = new set<int>();
     set<int>* impactedFlow = new set<int>();
@@ -119,7 +122,7 @@ int main(int argc, char **argv) {
 
     int routing = 0; //[WDM] 0 stands for ecmp; 1 stands for two-level routing
     int topology = 0; // 0 stands for fattree; 1 stands for sharebackup; 2 stands for f10
-
+    int isDdlflow = 0;
     int failedLinkId = 0;
     int trafficLevel = 0; //0 stands for server level; 1 stands for rack level
     int trial = 0;
@@ -140,6 +143,10 @@ int main(int argc, char **argv) {
             i += 2;
         }
 
+        if (argc > i && !strcmp(argv[i], "-isddlflow")) {
+            isDdlflow = atoi(argv[i + 1]);
+            i += 2;
+        }
 
         if (argc > i && !strcmp(argv[i], "-trafficLevel")) {
             trafficLevel = atoi(argv[i + 1]);
@@ -158,7 +165,7 @@ int main(int argc, char **argv) {
     }
 
     cout<<"Topology: "<<topology<<" routing: "<<routing<<" linkId: "
-        <<failedLinkId<<" trafficLevel: "<<trafficLevel<<" trial: "<<trial<<" K: "<<K<<endl;
+        <<failedLinkId<<" isDeadline:"<<isDdlflow<<" trafficLevel: "<<trafficLevel<<" trial: "<<trial<<" K: "<<K<<endl;
 
     string traceName = traf_file_name.substr(traf_file_name.rfind("/")+1);
 
@@ -270,7 +277,14 @@ int main(int argc, char **argv) {
             string sub = str.substr(0, posi);
             int reducer = atoi(sub.c_str());
             sub = str.substr(posi + 1, str.length());
-            uint64_t volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000000);
+            uint64_t volume_bytes;
+            if(isDdlflow>0) {
+                totalTrafficBytes += atof(sub.c_str())*1000;
+                volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000);
+            }else{
+                totalTrafficBytes += atof(sub.c_str())*1000*1000;
+                volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000000);
+            }
             if (trafficLevel == 0) {
                 dest = reducer;
             } else {
@@ -283,6 +297,8 @@ int main(int argc, char **argv) {
                 tcpSrc = new TcpSrc(tcpSnk, src, dest, eventlist, volume_bytes, arrivalTime_ms, flowId, coflowId);
                 tcpSnk->set_super_id(flowId);
 
+                lastArrivalTime = arrivalTime_ms>lastArrivalTime?arrivalTime_ms:lastArrivalTime;
+
                 tcpSrc->setFlowCounter(impactedFlow,impactedCoflow,secondImpactedFlow,secondImpactedCoflow,deadFlow,deadCoflow,finishedFlowStats);
                 tcpSrc->installTcp(top,linkFailureEvent,routing);
                 tcpRtxScanner.registerTcp(*tcpSrc);
@@ -291,6 +307,10 @@ int main(int argc, char **argv) {
             }
         }
     }
+
+    cout<<"TotalTrafficB:"<<totalTrafficBytes<<" TotalTime:"<<lastArrivalTime
+        <<" load:"<<Topology::getLoad(lastArrivalTime, totalTrafficBytes)<<endl;
+
     tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     // GO!
     while (eventlist.doNextEvent()) {
