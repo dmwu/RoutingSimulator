@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 cd ../cmake-build-debug
 cmake ..
-make clean;make
+make clean; make
 declare -a ratio4trace=("deadlineCoflows_fanin_20")
 declare -a ratio10trace=("perm_K16Ratio10server10240" "a2rack_K16Ratio10RackSize80")
-#-topo 0 -routing 1 -linkId 4097 -trafficLevel 0 -trial 0 trafficTraces/singleFlowDebugging
+
 for trace in "${ratio4trace[@]}"
     do
     for top in 0 1 2
@@ -17,7 +17,8 @@ for trace in "${ratio4trace[@]}"
                 for trial in 1 2 3
                     do
                     fileName="top_"${top}"rt"${rt}"_linkId_"${linkId}"_trial_"${trial}"_"${trace}".temp"
-                    ./mainDynamic -topo ${top} -routing ${rt} -linkId ${linkId} --isddlflow 1 -trafficLevel 0 -trial ${trial} ../trafficTraces/${trace} > ${fileName} &
+                    echo $fileName
+                    ./mainDynamic -topo ${top} -routing ${rt} -linkId ${linkId} -isddlflow 1 -trafficLevel 0 -trial ${trial} ../trafficTraces/${trace} > ${fileName} &
                 done
             done
         done
@@ -25,6 +26,7 @@ for trace in "${ratio4trace[@]}"
     done
     now=$(date +"%m_%d_%Y")
     linkFilename="final_links_"${trace}${now}".impact"
+    echo $linkFilename
     for entry in ./*"link"*${trace}".temp"
         do
         cat ${entry} >> ${linkFilename}
