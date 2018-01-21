@@ -9,7 +9,7 @@ for trace in "${ratio1trace[@]}"
     do
     for top in 0 1 2 3
         do
-        for nodeId in -1 0 128 256
+        for linkId in -1 0 1024 2048
             do
             for rt in 0
                 do
@@ -17,7 +17,7 @@ for trace in "${ratio1trace[@]}"
                     do
                     fileName="top_"${top}"rt"${rt}"_nodeId_"${nodeId}"_trial_"${trial}"_"${trace}".temp"
                     echo $fileName
-                    ./mainDynamic -topo ${top} -routing ${rt} -nodeId ${nodeId} -isddlflow 0 -trafficLevel 1 -trial ${trial} ../trafficTraces/${trace} > ${fileName} &
+                    ./mainDynamic -topo ${top} -routing ${rt} -linkId ${linkId} -isddlflow 0 -trafficLevel 1 -trial ${trial} ../trafficTraces/${trace} > ${fileName} &
                 done
             done
         done
