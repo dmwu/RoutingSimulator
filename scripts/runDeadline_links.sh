@@ -15,7 +15,7 @@ for trace in "${ratio1trace[@]}"
                 do
                 for trial in 0
                     do
-                    fileName="top_"${top}"rt"${rt}"_nodeId_"${nodeId}"_trial_"${trial}"_"${trace}".temp"
+                    fileName="top_"${top}"rt"${rt}"_linkId_"${linkId}"_trial_"${trial}"_"${trace}".temp"
                     echo $fileName
                     ./mainDynamic -topo ${top} -routing ${rt} -linkId ${linkId} -isddlflow 0 -trafficLevel 1 -trial ${trial} ../trafficTraces/${trace} > ${fileName} &
                 done
@@ -24,9 +24,9 @@ for trace in "${ratio1trace[@]}"
     done
     wait
     now=$(date +"%m_%d_%Y")
-    linkFilename="final_nodes_"${trace}${now}".impact"
+    linkFilename="final_links_"${trace}${now}".impact"
     echo $linkFilename
-    for entry in ./*"node"*${trace}".temp"
+    for entry in ./*"link"*${trace}".temp"
         do
         cat ${entry} >> ${linkFilename}
         echo "" >> ${linkFilename}

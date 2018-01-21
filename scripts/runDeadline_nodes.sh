@@ -25,12 +25,12 @@ for trace in "${ratio1trace[@]}"
     done
     wait
     now=$(date +"%m_%d_%Y")
-    linkFilename="final_nodes_"${trace}${now}".impact"
-    echo $linkFilename
+    nodeFilename="final_nodes_"${trace}${now}".impact"
+    echo $nodeFilename
     for entry in ./*"node"*${trace}".temp"
         do
-        cat ${entry} >> ${linkFilename}
-        echo "" >> ${linkFilename}
+        cat ${entry} >> ${nodeFilename}
+        echo "" >> ${nodeFilename}
     done
     rm *.temp
 done
