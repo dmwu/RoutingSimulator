@@ -14,29 +14,36 @@
 
 typedef vector<PacketSink*> route_t;
 
-enum LinkState {GOOD, WAITING_REROUTING, BAD, WAITING_RECOVER};
+enum FailureState {GOOD, WAITING_REROUTING, BAD, WAITING_RECOVER};
 
-class SingleDynamicLinkFailureEvent: public EventSource {
+class SingleDynamicFailureEvent: public EventSource {
 public:
-    SingleDynamicLinkFailureEvent(EventList& eventlist, Topology* topo,  simtime_picosec startFrom, simtime_picosec failureTime, int linkid);
-    SingleDynamicLinkFailureEvent(EventList& eventlist, Topology* topo);
-    SingleDynamicLinkFailureEvent(EventList& eventList, simtime_picosec startFrom, simtime_picosec failureTime, int linkid);
+    SingleDynamicFailureEvent(EventList& eventlist, Topology* topo,
+                              simtime_picosec startFrom, simtime_picosec failureTime,
+                              int linkid, int nodeid);
+    SingleDynamicFailureEvent(EventList& eventlist, Topology* topo);
+    SingleDynamicFailureEvent(EventList& eventList, simtime_picosec startFrom, simtime_picosec failureTime, int linkid);
     void setStartEndTime(simtime_picosec startFrom, simtime_picosec endTime);
     void setFailedLinkid(int linkid);
+    void setFailedNodeid(int nodeid);
     void installEvent();
     void setFailureRecoveryDelay(simtime_picosec setupReroutingDelay, simtime_picosec pathRestoreDelay);
     void setTopology(Topology*);
     void doNextEvent();
+    set<Queue*>* _relevantQueues;
     simtime_picosec _startFrom;
     simtime_picosec _failureTime;
     Topology* _topo;
-    LinkState _linkStatus = GOOD;
+    FailureState _failureStatus = GOOD;
     bool UsingShareBackup = false;
-    int _linkid;
+    int _linkid, _nodeid;
     simtime_picosec _setupReroutingDelay, _pathRestoreDelay;
-    set<TcpSrc*>* _connections;
-    void registerConnection(TcpSrc* fc);
-    void removeConnection(TcpSrc* fc);
+    set<TcpSrc*>* _activeConnections;
+    set<TcpSrc*>* _sleepingConnections;
+    void addActiveConnection(TcpSrc *fc);
+    void removeActiveConnection(TcpSrc *fc);
+    void addSleepingConnection(TcpSrc*fc);
+    void removeSleepingConnection(TcpSrc*fc);
     bool isPathOverlapping(route_t*);
     vector<int>* lpBackupUsageTracker;
     vector<int>* upBackupUsageTracker;

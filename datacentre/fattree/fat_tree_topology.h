@@ -74,7 +74,6 @@ public:
 
     virtual bool isPathValid(route_t *path);
 
-protected:
     map<RandomQueue *, int> _link_usage;
     virtual pair<route_t*, route_t*> getLeastLoadedPath(int src, int dest);
     virtual pair<route_t*, route_t*> getOneWorkingPath(int src, int dest);
@@ -94,7 +93,7 @@ protected:
 
     route_t* getReversePath(int src, int dest, route_t*dataPath);
 
-    vector<int>* getLinksFromSwitch(int sid);
+    virtual vector<int>* getLinksFromSwitch(int sid);
 };
 
 #endif

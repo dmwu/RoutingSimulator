@@ -85,7 +85,7 @@ protected:
 
     route_t* getReversePath(int src, int dest, route_t*dataPath);
 
-    vector<int>* getLinksFromSwitch(int sid);
+    virtual vector<int>* getLinksFromSwitch(int sid);
 };
 
 

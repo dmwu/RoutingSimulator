@@ -9,8 +9,8 @@
 #include <list>
 #include <math.h>
 #include <set>
-#include <MultipleSteadyLinkFailures.h>
-#include "SingleDynamicLinkFailureEvent.h"
+#include <MultipleSteadyFailures.h>
+#include "SingleDynamicFailureEvent.h"
 #include "network.h"
 #include "randomqueue.h"
 #include "pipe.h"
@@ -56,7 +56,7 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
         if(deadCoflows->count(cid)>0)
             (*cct)[cid] = INT32_MAX;
         else {
-            int duration = it.second->_duration_ms;
+            double duration = it.second->_duration_ms;
             if (cct->count(cid) == 0 || cct->at(cid) < duration)
                 (*cct)[cid] = duration;
         }
@@ -72,7 +72,7 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
 string getCCTFileName(int topology, int routing, int pos, int linkNum, int switchNum, string trace, int trial){
     stringstream file;
     file<<"top"<<topology<<"rt"<<routing<<"_"<<GLOBAL_LOAD_BALANCING
-        <<"pos"<<pos<<"l"<<linkNum<<"s"<<switchNum<<"_"<<trace<<"_"<<trial<<".cct";
+        <<"pos"<<pos<<"l"<<linkNum<<"s"<<switchNum<<"_"<<trace<<"_"<<trial<<".cct.csv";
     return file.str();
 }
 
@@ -105,7 +105,8 @@ int main(int argc, char **argv) {
 
     int failedLinks[]={};
     int failedSwitches[]{};
-
+    double totalTrafficBytes = 0;
+    double lastArrivalTime =0;
     int totalFlows = 0;
 
     set<int>* impactedCoflow = new set<int>();
@@ -118,7 +119,7 @@ int main(int argc, char **argv) {
     set<int>* totalImpactedCoflow = new set<int>();
 
     double simStartingTime_ms = -1;
-
+    int isDdlFlow = 0;
     int routing = 0; //[WDM] 0 stands for ecmp; 1 stands for two-level routing
     int topology = 0; // 0 stands for fattree; 1 stands for sharebackup; 2 stands for f10
     int failureLocation = 0;// 0 edge, 1 aggregation, 2 core
@@ -143,6 +144,7 @@ int main(int argc, char **argv) {
             failedLinkNum = atoi(argv[i + 1]);
             i += 2;
         }
+
         if (argc > i && !strcmp(argv[i], "-switchNum")) {
             failedSwitchNum = atoi(argv[i + 1]);
             i += 2;
@@ -153,6 +155,10 @@ int main(int argc, char **argv) {
             i += 2;
         }
 
+        if (argc > i && !strcmp(argv[i], "-isddlflow")) {
+            isDdlFlow = atoi(argv[i + 1]);
+            i += 2;
+        }
 
         if (argc > i && !strcmp(argv[i], "-trafficLevel")) {
             trafficLevel = atoi(argv[i + 1]);
@@ -196,16 +202,16 @@ int main(int argc, char **argv) {
     TcpRtxTimerScanner tcpRtxScanner(timeFromMs(TCP_TIMEOUT_SCANNER_PERIOD), eventlist); //irregular tcp retransmit timeout
     Topology *top = NULL;
 
-    MultipleSteadyLinkFailures* multipleSteadyLinkFailures= nullptr;
+    MultipleSteadyFailures* multipleSteadyLinkFailures= nullptr;
     if (topology <= 1) {
         top = new FatTreeTopology(&eventlist);
-        multipleSteadyLinkFailures = new MultipleSteadyLinkFailures(&eventlist,top);
+        multipleSteadyLinkFailures = new MultipleSteadyFailures(&eventlist,top);
         if (topology == 1) {
             multipleSteadyLinkFailures->_useShareBackup=true;
         }
     } else {
         top = new F10Topology(&eventlist);
-        multipleSteadyLinkFailures = new MultipleSteadyLinkFailures(&eventlist,top);
+        multipleSteadyLinkFailures = new MultipleSteadyFailures(&eventlist,top);
     }
     multipleSteadyLinkFailures->setRandomLinkFailures(failedLinkNum, failureLocation);
     multipleSteadyLinkFailures->setRandomSwitchFailure(failedSwitchNum, failureLocation);
@@ -234,7 +240,7 @@ int main(int argc, char **argv) {
     map<int,FlowConnection*>* finishedFlowStats = new map<int, FlowConnection*>();
 
     int src, dest;
-    srand(0);
+    srand (0);
     while (getline(traf_file, line)){
         int i = 0;
         int pos = line.find(" ");
@@ -279,7 +285,15 @@ int main(int argc, char **argv) {
             string sub = str.substr(0, posi);
             int reducer = atoi(sub.c_str());
             sub = str.substr(posi + 1, str.length());
-            uint64_t volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000000);
+            uint64_t volume_bytes;
+            if(isDdlFlow>0) {
+                totalTrafficBytes += atof(sub.c_str())*1000;
+                volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000);
+            }else{
+                totalTrafficBytes += atof(sub.c_str())*1000*1000;
+                volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000000);
+            }
+
             if (trafficLevel == 0) {
                 dest = reducer;
             } else {
@@ -291,7 +305,7 @@ int main(int argc, char **argv) {
                 tcpSnk = new TcpSink(&eventlist);
                 tcpSrc = new TcpSrc(tcpSnk, src, dest, eventlist, volume_bytes, arrivalTime_ms, flowId, coflowId);
                 tcpSnk->set_super_id(flowId);
-
+                lastArrivalTime = arrivalTime_ms>lastArrivalTime?arrivalTime_ms:lastArrivalTime;
                 tcpSrc->setFlowCounter(impactedFlow,impactedCoflow,secondImpactedFlow,secondImpactedCoflow,deadFlow,deadCoflow,finishedFlowStats);
                 tcpSrc->installTcp(top, nullptr, routing);
                 tcpRtxScanner.registerTcp(*tcpSrc);
@@ -300,6 +314,9 @@ int main(int argc, char **argv) {
             }
         }
     }
+    cout<<"TotalTrafficKB:"<<totalTrafficBytes/1000<<" TotalTime:"<<lastArrivalTime
+        <<" load:"<<Topology::getLoad(lastArrivalTime, totalTrafficBytes)<<endl;
+
     tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     // GO!
     while (eventlist.doNextEvent()) {
@@ -311,7 +328,8 @@ int main(int argc, char **argv) {
     assert(fctLogFile.is_open());
 
     for (pair<int,FlowConnection*>it: *finishedFlowStats) {
-            fctLogFile<<it.first<<" "<<it.second->_duration_ms<<endl;
+        fctLogFile<<it.first<<","<<it.second->_src<<","<<it.second->_dest<<","
+                  <<it.second->_duration_ms<<","<<it.second->_flowSize_Bytes <<endl;
     }
 
     for( int superId: *deadFlow){
@@ -320,7 +338,7 @@ int main(int argc, char **argv) {
 
     map<int, double>* cct = getCoflowStats(finishedFlowStats,deadCoflow);
     for(pair<int,double> it:*cct){
-            cctLogFile<<it.first<<" "<<it.second<<endl;
+        cctLogFile<<it.first<<","<<it.second<<endl;
     }
 
     fctLogFile.flush();

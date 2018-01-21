@@ -13,9 +13,9 @@
 #include <cstdlib>      // std::rand, std::srand
 #include "../main.h"
 
-class MultipleSteadyLinkFailures{
+class MultipleSteadyFailures{
 public:
-    MultipleSteadyLinkFailures(EventList*ev,Topology*topo);
+    MultipleSteadyFailures(EventList*ev,Topology*topo);
     EventList*_ev;
     set<int>* _givenFailedLinks;
     set<int>* _givenFailedSwitches;

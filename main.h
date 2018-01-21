@@ -8,7 +8,7 @@
 // RRG STUFF
 #define R 0		// R = switch-switch ports (or network-ports)
 #define SP 0		// P = total ports on switch
-#define RTT 10 // Identical RTT microseconds = 0.01 ms [WDM] I change it to 10us to match the link speed.
+#define RTT 30 // Identical RTT microseconds = 0.03 ms [WDM] I change it to 30us to match the link speed.
 // FAT
 #define K 16
 #define RATIO 1
@@ -35,12 +35,12 @@
 
 #define BACKUPS_PER_GROUP 1
 
-#define LOCAL_REROUTE_DELAY 2 //ms
+#define LOCAL_REROUTE_DELAY 1//ms
 #define GLOBAL_REROUTE_DELAY 65 //ms
-#define CIRCUIT_SWITCHING_DELAY 2 //ms
+#define ASPEN_TREE_DELAY 32
+#define CIRCUIT_SWITCHING_DELAY 1 //ms
 #define TCP_TIMEOUT_SCANNER_PERIOD 0.05 //ms
-
-#define GLOBAL_LOAD_BALANCING 1
+#define GLOBAL_LOAD_BALANCING 0
 
 #endif
 

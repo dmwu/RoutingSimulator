@@ -2,7 +2,7 @@
 cd ../cmake-build-debug
 cmake ..
 make clean; make
-declare -a ratio4trace=("deadlineCoflows_fanin_20")
+declare -a ratio4trace=("deadlineCoflows_fanin_40")
 declare -a ratio10trace=("perm_K16Ratio10server10240" "a2rack_K16Ratio10RackSize80")
 
 for trace in "${ratio4trace[@]}"

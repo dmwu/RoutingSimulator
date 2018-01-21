@@ -24,10 +24,10 @@ class MultipathTcpSrc;
 
 class MultipathTcpSink;
 
-class SingleDynamicLinkFailureEvent;
+class SingleDynamicFailureEvent;
 
 class FlowConnection;
-
+enum FlowStatus {NotCreated, Active, Sleeping, Dead, Finished};
 class TcpSrc : public PacketSink, public EventSource {
     friend class TcpSink;
 
@@ -37,7 +37,7 @@ public:
     TcpSrc(TcpSink*sink, int src, int dest, EventList &eventlist, uint64_t volume, double start_ms, int super_id, int coflowId);
 
     virtual void connect(route_t &routeout, route_t &routeback, TcpSink &sink, simtime_picosec startTime_ps);
-    void installTcp(Topology* topo, SingleDynamicLinkFailureEvent*,int rt);
+    void installTcp(Topology* topo, SingleDynamicFailureEvent*,int rt);
     void setupConnection();
 
     void startflow();
@@ -61,8 +61,10 @@ public:
 
     uint32_t effective_window();
     void handleFlowCompletion();
+    void handleFlowSleeping();
     void handleFlowDeath();
-    void handleFlowRerouting(route_t*);
+    void wakeupFlow(double delayMs);
+    void handleFlowRerouting(route_t*, route_t*);
     void handleImpactedFlow();
 
     virtual void rtx_timer_hook(simtime_picosec now, simtime_picosec period);
@@ -83,8 +85,7 @@ public:
     uint64_t _flow_total_sent;
     uint64_t _flow_total_received;
     uint64_t _flow_volume_bytes;
-    bool _flow_finish;
-    bool _flow_started=false;
+    FlowStatus _flowStatus = NotCreated;
     double _flow_start_time_ms;
     int _superId;
     int _coflowID;
@@ -112,7 +113,7 @@ public:
 
     uint32_t _drops;
 
-    SingleDynamicLinkFailureEvent* _singleLinkFailureEvent;
+    SingleDynamicFailureEvent* _singleLinkFailureEvent;
     TcpSink *_sink;
     MultipathTcpSrc *_mSrc;
     simtime_picosec _RFC2988_RTO_timeout;
@@ -120,7 +121,7 @@ public:
 
     void set_app_limit(int pktps);
 
-    route_t *_route;
+    route_t *_route= nullptr;
     simtime_picosec _last_ping;
     map<int,FlowConnection*>* _flowStats;
 #ifdef PACKET_SCATTER

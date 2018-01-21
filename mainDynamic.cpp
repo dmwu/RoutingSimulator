@@ -9,8 +9,8 @@
 #include <list>
 #include <math.h>
 #include <set>
-#include <MultipleSteadyLinkFailures.h>
-#include "SingleDynamicLinkFailureEvent.h"
+#include <MultipleSteadyFailures.h>
+#include "SingleDynamicFailureEvent.h"
 #include "network.h"
 #include "randomqueue.h"
 #include "pipe.h"
@@ -28,6 +28,7 @@
 #include "fat_tree_topology.h"
 #include "F10.h"
 #include "main.h"
+#include "AspenTree.h"
 
 // TOPOLOGY TO USE
 #if CHOSEN_TOPO == FAT
@@ -54,7 +55,7 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
     for(pair<int,FlowConnection*> it: *flowStats){
         int cid = it.second->_coflowId;
         if(deadCoflows->count(cid)>0)
-            (*cct)[cid] = INT32_MAX;
+            (*cct)[cid] = -1;
         else {
             double duration = it.second->_duration_ms;
             if (cct->count(cid) == 0 || cct->at(cid) < duration)
@@ -63,23 +64,23 @@ map<int, double>* getCoflowStats(map<int,FlowConnection*>* flowStats, set<int>* 
     }
     for (int dc:*deadCoflows){
         if(cct->count(dc) == 0){
-            (*cct)[dc] = INT32_MAX;
+            (*cct)[dc] = -1;
         }
     }
     return cct;
 }
 
-string getCCTFileName(int topology, int routing, int failedLinkId, string trace, int trial){
+string getCCTFileName(int topology, int routing, int failedLinkId, int nodeId, string trace, int trial){
     stringstream file;
     file<<"top"<<topology<<"rt"<<routing<<"_"<<GLOBAL_LOAD_BALANCING
-        <<"linkId"<<failedLinkId<<"_"<<trace<<"_"<<trial<<".cct";
+        <<"linkId"<<failedLinkId<<"nodeId"<<nodeId<<"_"<<trace<<"_"<<trial<<".cct.csv";
     return file.str();
 }
 
-string getFCTFileName(int topology, int routing, int failedLinkId, string trace, int trial){
+string getFCTFileName(int topology, int routing, int failedLinkId, int nodeId, string trace, int trial){
     stringstream file;
     file<<"top"<<topology<<"rt"<<routing<<"_"<<GLOBAL_LOAD_BALANCING
-        <<"linkId"<<failedLinkId<<"_"<<trace<<"_"<<trial<<".fct";
+        <<"linkId"<<failedLinkId<<"nodeId"<<nodeId<<"_"<<trace<<"_"<<trial<<".fct.csv";
     return file.str();
 }
 
@@ -100,11 +101,11 @@ void fileNotFoundError(string fn){
 
 int main(int argc, char **argv) {
     clock_t begin = clock();
-    std::srand (time(0));
+    std::srand (0);
 
     int totalFlows = 0;
-    int failureStartingTime = 0;
-    int failureDuration = 300;
+    double failureStartingTimeMs = 3;
+    double failureDurationMs = 350000;
 
     double totalTrafficBytes = 0;
     double lastArrivalTime =0;
@@ -123,7 +124,7 @@ int main(int argc, char **argv) {
     int routing = 0; //[WDM] 0 stands for ecmp; 1 stands for two-level routing
     int topology = 0; // 0 stands for fattree; 1 stands for sharebackup; 2 stands for f10
     int isDdlflow = 0;
-    int failedLinkId = 0;
+    int failedLinkId = -1, failedNodeId = -1;
     int trafficLevel = 0; //0 stands for server level; 1 stands for rack level
     int trial = 0;
     string traf_file_name;
@@ -140,6 +141,12 @@ int main(int argc, char **argv) {
 
         if (argc > i && !strcmp(argv[i], "-linkId")) {
             failedLinkId = atoi(argv[i + 1]);
+            i += 2;
+        }
+
+
+        if (argc > i && !strcmp(argv[i], "-nodeId")) {
+            failedNodeId = atoi(argv[i + 1]);
             i += 2;
         }
 
@@ -164,16 +171,16 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    cout<<"Topology: "<<topology<<" routing: "<<routing<<" linkId: "
-        <<failedLinkId<<" isDeadline:"<<isDdlflow<<" trafficLevel: "<<trafficLevel<<" trial: "<<trial<<" K: "<<K<<endl;
+    cout<<"Topology:"<<topology<<" routing:"<<routing<<" linkId:"
+        <<failedLinkId<< " nodeId:"<<failedNodeId<<" isDeadline:"<<isDdlflow<<" trafficLevel: "<<trafficLevel<<" trial: "<<trial<<" K: "<<K<<endl;
 
     string traceName = traf_file_name.substr(traf_file_name.rfind("/")+1);
 
     string cctLogFilename
-            =getCCTFileName(topology, routing, failedLinkId, traceName, trial);
+            =getCCTFileName(topology, routing, failedLinkId, failedNodeId, traceName, trial);
 
     string fctLogFilename
-            = getFCTFileName(topology, routing, failedLinkId, traceName, trial);
+            = getFCTFileName(topology, routing, failedLinkId, failedNodeId, traceName, trial);
 
 #if PRINT_PATHS
     filename << "logs.paths";
@@ -190,28 +197,46 @@ int main(int argc, char **argv) {
     TcpRtxTimerScanner tcpRtxScanner(timeFromMs(TCP_TIMEOUT_SCANNER_PERIOD), eventlist); //irregular tcp retransmit timeout
     Topology *top = NULL;
 
-    SingleDynamicLinkFailureEvent *linkFailureEvent;
-    if (topology <= 1) {
+    SingleDynamicFailureEvent *linkFailureEvent;
+    if (topology ==0 ) {
         top = new FatTreeTopology(&eventlist);
-        linkFailureEvent = new SingleDynamicLinkFailureEvent(eventlist, top, timeFromSec(failureStartingTime),
-                                                             timeFromSec(failureDuration), failedLinkId);
+        linkFailureEvent = new SingleDynamicFailureEvent(eventlist, top,
+                                                         timeFromMs(failureStartingTimeMs),
+                                                         timeFromMs(failureDurationMs),
+                                                         failedLinkId, failedNodeId);
         linkFailureEvent->setFailureRecoveryDelay(timeFromMs(GLOBAL_REROUTE_DELAY),
                                                   timeFromMs(GLOBAL_REROUTE_DELAY));
-        if (topology == 1) {
-            linkFailureEvent->UsingShareBackup = true;
-            vector<int> *lpBackupUsageTracker = new vector<int>(K,BACKUPS_PER_GROUP);
-            vector<int> *upBackupUsageTracker = new vector<int>(K,BACKUPS_PER_GROUP);
-            vector<int> *coreBackupUsageTracker = new vector<int>(K/2, BACKUPS_PER_GROUP);
-            linkFailureEvent->setFailureRecoveryDelay(timeFromMs(CIRCUIT_SWITCHING_DELAY), 0);
-            linkFailureEvent->setBackupUsageTracker(lpBackupUsageTracker, upBackupUsageTracker,
-                                                    coreBackupUsageTracker);
-        }
-    } else {
-        top = new F10Topology(&eventlist);
-        linkFailureEvent = new SingleDynamicLinkFailureEvent(eventlist, top, timeFromSec(failureStartingTime),
-                                                             timeFromSec(failureDuration), failedLinkId);
-        linkFailureEvent->setFailureRecoveryDelay(timeFromMs(LOCAL_REROUTE_DELAY), timeFromMs(LOCAL_REROUTE_DELAY));
     }
+    else if (topology == 1) {
+        top = new FatTreeTopology(&eventlist);
+        linkFailureEvent = new SingleDynamicFailureEvent(eventlist, top,
+                                                         timeFromMs(failureStartingTimeMs),
+                                                         timeFromMs(failureDurationMs),
+                                                         failedLinkId, failedNodeId);
+        linkFailureEvent->UsingShareBackup = true;
+        vector<int> *lpBackupUsageTracker = new vector<int>(K,BACKUPS_PER_GROUP);
+        vector<int> *upBackupUsageTracker = new vector<int>(K,BACKUPS_PER_GROUP);
+        vector<int> *coreBackupUsageTracker = new vector<int>(K/2, BACKUPS_PER_GROUP);
+        linkFailureEvent->setFailureRecoveryDelay(timeFromMs(CIRCUIT_SWITCHING_DELAY), 0);
+        linkFailureEvent->setBackupUsageTracker(lpBackupUsageTracker, upBackupUsageTracker,
+                                                coreBackupUsageTracker);
+    }
+    else if(topology == 2){
+        top = new F10Topology(&eventlist);
+        linkFailureEvent = new SingleDynamicFailureEvent(eventlist, top,
+                                                         timeFromMs(failureStartingTimeMs),
+                                                         timeFromMs(failureDurationMs),
+                                                         failedLinkId, failedNodeId);
+        linkFailureEvent->setFailureRecoveryDelay(timeFromMs(LOCAL_REROUTE_DELAY), timeFromMs(LOCAL_REROUTE_DELAY));
+    }else{
+        top = new AspenTree(&eventlist);
+        linkFailureEvent = new SingleDynamicFailureEvent(eventlist, top,
+                                                         timeFromMs(failureStartingTimeMs),
+                                                         timeFromMs(failureDurationMs),
+                                                         failedLinkId, failedNodeId);
+        linkFailureEvent->setFailureRecoveryDelay(timeFromMs(ASPEN_TREE_DELAY), timeFromMs(ASPEN_TREE_DELAY));
+    }
+
     linkFailureEvent->installEvent();
 
     int flowId = 0;
@@ -303,13 +328,12 @@ int main(int argc, char **argv) {
                 tcpSrc->installTcp(top,linkFailureEvent,routing);
                 tcpRtxScanner.registerTcp(*tcpSrc);
                 flowId++;
-
             }
         }
     }
 
-    cout<<"TotalTrafficB:"<<totalTrafficBytes<<" TotalTime:"<<lastArrivalTime
-        <<" load:"<<Topology::getLoad(lastArrivalTime, totalTrafficBytes)<<endl;
+    cout<<"TotalTrafficKB:"<<totalTrafficBytes/1000<<" TotalTime:"<<lastArrivalTime
+        <<" load:"<<Topology::getLoad(lastArrivalTime, totalTrafficBytes/1000)<<endl;
 
     tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     // GO!
@@ -317,25 +341,24 @@ int main(int argc, char **argv) {
 
     }
     std::ofstream cctLogFile(cctLogFilename.c_str());
-    std::ofstream fctLogFile(fctLogFilename.c_str());
-    assert(cctLogFile.is_open());
-    assert(fctLogFile.is_open());
+    //std::ofstream fctLogFile(fctLogFilename.c_str());
 
-    for (pair<int,FlowConnection*>it: *finishedFlowStats) {
-        fctLogFile<<it.first<<" "<<it.second->_duration_ms<<endl;
-    }
-
-    for( int superId: *deadFlow){
-        fctLogFile<<superId<<" "<<INT32_MAX<<endl;
-    }
+//    for (pair<int,FlowConnection*>it: *finishedFlowStats) {
+//        fctLogFile<<it.first<<","<<it.second->_src<<","<<it.second->_dest<<","
+//                  <<it.second->_duration_ms<<","<<it.second->_flowSize_Bytes <<endl;
+//    }
+//
+//    for( int superId: *deadFlow){
+//        fctLogFile<<superId<<" "<<INT32_MAX<<endl;
+//    }
 
     map<int, double>* cct = getCoflowStats(finishedFlowStats,deadCoflow);
     for(pair<int,double> it:*cct){
-        cctLogFile<<it.first<<" "<<it.second<<endl;
+        cctLogFile<<it.first<<","<<it.second<<endl;
     }
-
-    fctLogFile.flush();
-    fctLogFile.close();
+//
+//    fctLogFile.flush();
+//    fctLogFile.close();
     cctLogFile.flush();
     cctLogFile.close();
 

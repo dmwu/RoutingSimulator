@@ -4,10 +4,10 @@
 
 #include <set>
 #include <iostream>
-#include "MultipleSteadyLinkFailures.h"
+#include "MultipleSteadyFailures.h"
 
 
-MultipleSteadyLinkFailures::MultipleSteadyLinkFailures(EventList *ev, Topology *topo) : _ev(ev), _topo(topo) {
+MultipleSteadyFailures::MultipleSteadyFailures(EventList *ev, Topology *topo) : _ev(ev), _topo(topo) {
     _allLinks = new vector<int>();
     _allSwitches = new vector<int>();
     _inNetworkLinks = new vector<int>();
@@ -55,11 +55,11 @@ MultipleSteadyLinkFailures::MultipleSteadyLinkFailures(EventList *ev, Topology *
 }
 
 
-void MultipleSteadyLinkFailures::setSingleSwitchFailure(int switchId) {
+void MultipleSteadyFailures::setSingleSwitchFailure(int switchId) {
     _givenFailedSwitches->insert(switchId);
 }
 
-void MultipleSteadyLinkFailures::setRandomSwitchFailure(int num, int pos) {
+void MultipleSteadyFailures::setRandomSwitchFailure(int num, int pos) {
     srand(1);
     if (pos < 0) {
         std::random_shuffle(_allSwitches->begin(), _allSwitches->end(), Topology::myrandom);
@@ -74,7 +74,7 @@ void MultipleSteadyLinkFailures::setRandomSwitchFailure(int num, int pos) {
             _givenFailedSwitches->insert(sid);
         }
     } else if (pos == 1) {
-        std::random_shuffle(_aggSwitches->begin(), _aggSwitches->end(), Topology::myrandom);
+        //std::random_shuffle(_aggSwitches->begin(), _aggSwitches->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int sid = _aggSwitches->at(i);
             _givenFailedSwitches->insert(sid);
@@ -94,12 +94,12 @@ void MultipleSteadyLinkFailures::setRandomSwitchFailure(int num, int pos) {
     }
 }
 
-void MultipleSteadyLinkFailures::setRandomSwitchFailure(double ratio, int pos) {
+void MultipleSteadyFailures::setRandomSwitchFailure(double ratio, int pos) {
     int numSwitches = (int) (ratio * _totalSwitches);
     setRandomSwitchFailure(numSwitches, pos);
 }
 
-void MultipleSteadyLinkFailures::updateBackupUsage() {
+void MultipleSteadyFailures::updateBackupUsage() {
     multiset<int> *groupFailureCount = new multiset<int>();
     set<int>* mappedSwitches = new set<int>();
     int gid = -1;
@@ -176,7 +176,7 @@ void MultipleSteadyLinkFailures::updateBackupUsage() {
     }
 }
 
-void MultipleSteadyLinkFailures::setRandomLinkFailures(int num, int pos) {
+void MultipleSteadyFailures::setRandomLinkFailures(int num, int pos) {
     srand(1);
     if (pos < 0) {
         std::random_shuffle(_allLinks->begin(), _allLinks->end(), Topology::myrandom);
@@ -211,16 +211,16 @@ void MultipleSteadyLinkFailures::setRandomLinkFailures(int num, int pos) {
     }
 }
 
-void MultipleSteadyLinkFailures::setRandomLinkFailures(double ratio, int pos) {
+void MultipleSteadyFailures::setRandomLinkFailures(double ratio, int pos) {
     int numLinks = (int) (ratio * _totalLinks);
     setRandomLinkFailures(numLinks, pos);
 }
 
-void MultipleSteadyLinkFailures::setSingleLinkFailure(int linkid) {
+void MultipleSteadyFailures::setSingleLinkFailure(int linkid) {
     _givenFailedLinks->insert(linkid);
 }
 
-void MultipleSteadyLinkFailures::installFailures() {
+void MultipleSteadyFailures::installFailures() {
     set<int> *actualFailedLinks, *actualFailedSwitches;
     if (_useShareBackup) {
         updateBackupUsage();
@@ -239,7 +239,7 @@ void MultipleSteadyLinkFailures::installFailures() {
     }
 }
 
-void MultipleSteadyLinkFailures::printFailures() {
+void MultipleSteadyFailures::printFailures() {
     cout <<"GivenFailedSwitchNum: "<<_givenFailedSwitches->size()<<" GivenFailedSwitches: ";
     for (int sid:*_givenFailedSwitches) {
         cout << sid << " ";

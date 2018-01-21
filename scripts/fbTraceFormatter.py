@@ -1,9 +1,9 @@
 import sys
 
 #intensify coflow + filtering gigantic coflow
-def traceFilter(filename, timeScaleRatio, sizeFilter, count):
-    with open('new'+filename,'w+') as wf:
-        with open(sys.argv[1],'r') as rf:
+def traceFormatter(filename, timeScaleRatio, sizeFilter, count):
+    with open('../trafficTraces/'+filename+"_scaleRatio_"+str(timeScaleRatio+1),'w+') as wf:
+        with open('../trafficTraces/'+filename,'r') as rf:
             startingTime = -1
             coflowIndex = -1
             for line in rf:
@@ -45,5 +45,5 @@ def combineTwoNewTrace(file1, file2, newFile):
     f3.close()
 
 if __name__ == "__main__":
-    traceFilter(sys.argv[1], sys.argv[2], sys.argv[3], 150)
+    traceFormatter('fb_1hr', 29, 240, 1000)
     #combineTwoNewTrace(sys.argv[1], sys.argv[2], sys.argv[3])

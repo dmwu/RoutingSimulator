@@ -34,6 +34,8 @@ public:
 
     virtual vector<int> *get_neighbours(int src) = 0;
 
+    virtual vector<int>* getLinksFromSwitch(int sid) = 0;
+
     static void addFlowToPath(int superId, int coflowId, route_t *path) {
         //assume a path starts with a transmitting queue followed by a pipe
         assert(path->size() >= 2);
@@ -48,14 +50,15 @@ public:
 
     static void removeFlowFromPath(int superId, int coflowId, route_t *path) {
         //assume a path starts with a transmitting queue followed by a pipe
-        assert(path->size() >= 2);
+        if(path==NULL || path->size() < 2){
+            return;
+        }
         //starting from a pipe
         for (unsigned i = 1; i < path->size() - 2; i += 2) {
             Pipe *pipe = (Pipe *) path->at(i);
-            assert(pipe->_flowTracker->count(superId) > 0);
             pipe->_flowTracker->erase(superId);
-            assert(pipe->_coflowTracker->count(coflowId) > 0);
-            pipe->_coflowTracker->erase(pipe->_coflowTracker->find(coflowId));
+            if(pipe->_coflowTracker->count(coflowId)>0)
+                pipe->_coflowTracker->erase(pipe->_coflowTracker->find(coflowId));
 
         }
     }
@@ -99,9 +102,9 @@ public:
         return s.str();
     }
 
-    static double getLoad(double lastArrivalTime, double TrafficVolumeBytes){
+    static double getLoad(double lastArrivalTime, double TrafficVolumeKB){
         double totalLinks = K/2*K/2*K*2;
-        double timeSec = TrafficVolumeBytes*8*3.0/(1.0*1e9*totalLinks);
+        double timeSec = TrafficVolumeKB*1000*8*3.0/(1.0*1e9*totalLinks);
         return timeSec*1000.0/lastArrivalTime;
     }
 };
