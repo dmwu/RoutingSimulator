@@ -22,7 +22,6 @@ for trace in "${ratio1trace[@]}"
                 done
             done
         done
-        wait
     done
     now=$(date +"%m_%d_%Y")
     linkFilename="final_nodes_"${trace}${now}".impact"
