@@ -3,11 +3,11 @@ cd ../cmake-build-debug
 cmake ..
 make clean; make
 #declare -a ratio1trace=("deadlineCoflows_fanin_40_load_0.1" "deadlineCoflows_fanin_40_load_0.2" "deadlineCoflows_fanin_40_load_0.3")
-declare -a ratio1trace=("newfb10min_scaleRatio_10" "newfb10min_scaleRatio_20" "newfb10min_scaleRatio_30")
+declare -a ratio1trace=("newfb10min_scaleRatio_10")
 
 for trace in "${ratio1trace[@]}"
     do
-    for top in 2 3
+    for top in 0 1 2 3
         do
         for linkId in -1 0 1024 2048
             do
