@@ -334,6 +334,7 @@ int main(int argc, char **argv) {
 
     cout<<"TotalTrafficKB:"<<totalTrafficBytes/1000<<" TotalTime:"<<lastArrivalTime
         <<" load:"<<Topology::getLoad(lastArrivalTime, totalTrafficBytes/1000)<<endl;
+    cout<<"TotalFlows:"<<totalFlows<<endl;
 
     tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     // GO!
