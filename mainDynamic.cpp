@@ -341,24 +341,24 @@ int main(int argc, char **argv) {
 
     }
     std::ofstream cctLogFile(cctLogFilename.c_str());
-    //std::ofstream fctLogFile(fctLogFilename.c_str());
+    std::ofstream fctLogFile(fctLogFilename.c_str());
 
-//    for (pair<int,FlowConnection*>it: *finishedFlowStats) {
-//        fctLogFile<<it.first<<","<<it.second->_src<<","<<it.second->_dest<<","
-//                  <<it.second->_duration_ms<<","<<it.second->_flowSize_Bytes <<endl;
-//    }
-//
-//    for( int superId: *deadFlow){
-//        fctLogFile<<superId<<" "<<INT32_MAX<<endl;
-//    }
+    for (pair<int,FlowConnection*>it: *finishedFlowStats) {
+        fctLogFile<<it.first<<","<<it.second->_src<<","<<it.second->_dest<<","
+                  <<it.second->_duration_ms<<","<<it.second->_flowSize_Bytes <<endl;
+    }
+
+    for( int superId: *deadFlow){
+        fctLogFile<<superId<<" "<<INT32_MAX<<endl;
+    }
 
     map<int, double>* cct = getCoflowStats(finishedFlowStats,deadCoflow);
     for(pair<int,double> it:*cct){
         cctLogFile<<it.first<<","<<it.second<<endl;
     }
 //
-//    fctLogFile.flush();
-//    fctLogFile.close();
+    fctLogFile.flush();
+    fctLogFile.close();
     cctLogFile.flush();
     cctLogFile.close();
 

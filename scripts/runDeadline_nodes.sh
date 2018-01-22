@@ -8,7 +8,7 @@ declare -a ratio1trace=("fb_1hr_scaleRatio_10" "fb_1hr_scaleRatio_20" "fb_1hr_sc
 for trace in "${ratio1trace[@]}"
     do
 
-    for top in 0 1 2 3
+    for top in 2 3
         do
         for nodeId in -1 0 128 256
             do
