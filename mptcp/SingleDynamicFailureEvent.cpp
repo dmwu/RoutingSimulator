@@ -43,10 +43,12 @@ void SingleDynamicFailureEvent::setBackupUsageTracker(vector<int> *lp, vector<in
 
 void SingleDynamicFailureEvent::setFailedLinkid(int linkid) {
     _linkid = linkid;
+    _dualLink = (linkid+K/2*K/2)%(NHOST/RATIO);
 }
 
 void SingleDynamicFailureEvent::setFailedNodeid(int nodeid) {
     _nodeid = nodeid;
+    _dualNode = (nodeid+K/2)%(NK);
 }
 
 void SingleDynamicFailureEvent::setTopology(Topology *topo) {
@@ -62,9 +64,19 @@ void SingleDynamicFailureEvent::installEvent() {
         pair<Queue *, Queue *> queues = _topo->linkToQueues(_linkid);
         _relevantQueues->insert(queues.first);
         _relevantQueues->insert(queues.second);
+        queues = _topo->linkToQueues(_dualLink);
+        _relevantQueues->insert(queues.first);
+        _relevantQueues->insert(queues.second);
+
     }
     if(_nodeid>=0){
         vector<int>* links = _topo->getLinksFromSwitch(_nodeid);
+        for(int link:*links){
+            pair<Queue *, Queue *> queues = _topo->linkToQueues(link);
+            _relevantQueues->insert(queues.first);
+            _relevantQueues->insert(queues.second);
+        }
+        links = _topo->getLinksFromSwitch(_dualNode);
         for(int link:*links){
             pair<Queue *, Queue *> queues = _topo->linkToQueues(link);
             _relevantQueues->insert(queues.first);
@@ -107,18 +119,24 @@ void SingleDynamicFailureEvent::circuitReconfig() {
     if (_failureStatus == GOOD) {
         if(_linkid>=0){
             _topo->failLink(_linkid);
+            _topo->failLink(_dualLink);
         }else{
             assert(_nodeid>=0);
             _topo->failSwitch(_nodeid);
+            _topo->failSwitch(_dualNode);
         }
         this->eventlist().sourceIsPending(*this, eventlist().now() + _setupReroutingDelay);
         _failureStatus = WAITING_REROUTING;
 
     }else if(_failureStatus == WAITING_REROUTING){
-        if(_linkid>=0)
+        if(_linkid>=0) {
             _topo->recoverLink(_linkid);
-        else
+            _topo->recoverLink(_dualLink);
+        }
+        else {
             _topo->recoverSwitch(_nodeid);
+            _topo->recoverSwitch(_dualNode);
+        }
         _failureStatus = BAD;
         this->eventlist().sourceIsPending(*this, eventlist().now() + _failureTime);
 
@@ -144,11 +162,14 @@ bool SingleDynamicFailureEvent::hasEnoughBackup() {
 
 void SingleDynamicFailureEvent::rerouting(){
     if (_failureStatus == GOOD) {
-        if(_linkid>=0)
+        if(_linkid>=0) {
             _topo->failLink(_linkid);
+            _topo->failLink(_dualLink);
+        }
         else{
             assert(_nodeid>=0);
             _topo->failSwitch(_nodeid);
+            _topo->failSwitch(_dualNode);
         }
         this->eventlist().sourceIsPending(*this, eventlist().now() + _setupReroutingDelay);
         _failureStatus = WAITING_REROUTING;
@@ -186,11 +207,14 @@ void SingleDynamicFailureEvent::rerouting(){
 
     } else {
 
-        if(_linkid>=0)
+        if(_linkid>=0) {
             _topo->recoverLink(_linkid);
+            _topo->recoverLink(_dualLink);
+        }
         else{
             assert(_nodeid>=0);
             _topo->recoverSwitch(_nodeid);
+            _topo->recoverLink(_dualNode);
         }
         pair<route_t *, route_t *> path;
         set<TcpSrc*>* copyOfConnections = new set<TcpSrc*>(*_activeConnections);

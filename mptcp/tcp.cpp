@@ -140,7 +140,7 @@ void TcpSrc::connect(route_t &routeout, route_t &routeback, TcpSink &sink, simti
 void TcpSrc::installTcp(Topology *topo, SingleDynamicFailureEvent* singleLinkFailureEvent, int rt) {
     _topo = topo;
     _singleLinkFailureEvent = singleLinkFailureEvent;
-    int jitter_ms = rand()%20;
+    int jitter_ms = rand()%10;
     eventlist().sourceIsPending(*this, timeFromMs(_flow_start_time_ms+jitter_ms));
     _routing = rt;
 }

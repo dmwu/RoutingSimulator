@@ -36,7 +36,7 @@ public:
     Topology* _topo;
     FailureState _failureStatus = GOOD;
     bool UsingShareBackup = false;
-    int _linkid, _nodeid;
+    int _linkid, _dualLink, _nodeid, _dualNode;
     simtime_picosec _setupReroutingDelay, _pathRestoreDelay;
     set<TcpSrc*>* _activeConnections;
     set<TcpSrc*>* _sleepingConnections;
