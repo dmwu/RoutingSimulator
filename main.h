@@ -24,7 +24,7 @@
 #define MIN_POD_ID(pod_id) (pod_id*K/2)
 #define MAX_POD_ID(pod_id) ((pod_id+1)*K/2-1)
 
-#define SW_BW 125000 // switch link bandwidth in pps = 1Gbps
+#define SW_BW 1250000 // switch link bandwidth in pps = 10Gbps
 #define HOST_NIC SW_BW // host nic speed in pps
 #define CORE_TO_HOST 1 // right now it is non-blocking
 
@@ -36,8 +36,8 @@
 #define BACKUPS_PER_GROUP 1
 
 #define LOCAL_REROUTE_DELAY 1//ms
-#define GLOBAL_REROUTE_DELAY 65 //ms
-#define ASPEN_TREE_DELAY 32
+#define GLOBAL_REROUTE_DELAY 200 //ms
+#define ASPEN_TREE_DELAY 100
 #define CIRCUIT_SWITCHING_DELAY 1 //ms
 #define TCP_TIMEOUT_SCANNER_PERIOD 0.05 //ms
 #define GLOBAL_LOAD_BALANCING 0

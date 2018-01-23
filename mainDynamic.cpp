@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 
     int totalFlows = 0;
     double failureStartingTimeMs = 3;
-    double failureDurationMs = 350000;
+    double failureDurationSec = 2000;
 
     double totalTrafficBytes = 0;
     double lastArrivalTime =0;
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
         top = new FatTreeTopology(&eventlist);
         linkFailureEvent = new SingleDynamicFailureEvent(eventlist, top,
                                                          timeFromMs(failureStartingTimeMs),
-                                                         timeFromMs(failureDurationMs),
+                                                         timeFromSec(failureDurationSec),
                                                          failedLinkId, failedNodeId);
         linkFailureEvent->setFailureRecoveryDelay(timeFromMs(GLOBAL_REROUTE_DELAY),
                                                   timeFromMs(GLOBAL_REROUTE_DELAY));
@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
         top = new FatTreeTopology(&eventlist);
         linkFailureEvent = new SingleDynamicFailureEvent(eventlist, top,
                                                          timeFromMs(failureStartingTimeMs),
-                                                         timeFromMs(failureDurationMs),
+                                                         timeFromSec(failureDurationSec),
                                                          failedLinkId, failedNodeId);
         linkFailureEvent->UsingShareBackup = true;
         vector<int> *lpBackupUsageTracker = new vector<int>(K,BACKUPS_PER_GROUP);
@@ -225,14 +225,14 @@ int main(int argc, char **argv) {
         top = new F10Topology(&eventlist);
         linkFailureEvent = new SingleDynamicFailureEvent(eventlist, top,
                                                          timeFromMs(failureStartingTimeMs),
-                                                         timeFromMs(failureDurationMs),
+                                                         timeFromSec(failureDurationSec),
                                                          failedLinkId, failedNodeId);
         linkFailureEvent->setFailureRecoveryDelay(timeFromMs(LOCAL_REROUTE_DELAY), timeFromMs(LOCAL_REROUTE_DELAY));
     }else{
         top = new AspenTree(&eventlist);
         linkFailureEvent = new SingleDynamicFailureEvent(eventlist, top,
                                                          timeFromMs(failureStartingTimeMs),
-                                                         timeFromMs(failureDurationMs),
+                                                         timeFromSec(failureDurationSec),
                                                          failedLinkId, failedNodeId);
         linkFailureEvent->setFailureRecoveryDelay(timeFromMs(ASPEN_TREE_DELAY), timeFromMs(ASPEN_TREE_DELAY));
     }

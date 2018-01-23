@@ -692,7 +692,7 @@ void TcpSrc::handleFlowCompletion() {
     if(_singleLinkFailureEvent)
         _singleLinkFailureEvent->removeActiveConnection(this);
 //    cout <<eventlist().now()/1e9<<" [Finish] coflow:" << _coflowID <<" superId:"<<_superId
-//         <<" "<<_src << "->" << _dest <<" duration:"<<duration_ms
+//         <<" "<<(int)(_src/8.0*150/128) << "->" << (int)(_dest/8.0*150/128) <<" duration:"<<duration_ms
 //         <<" finishedFlowCount:"<<_flowStats->size()<<endl;
 
 }
