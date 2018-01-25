@@ -45,5 +45,5 @@ def combineTwoNewTrace(file1, file2, newFile):
     f3.close()
 
 if __name__ == "__main__":
-    traceFormatter('newfb10min', 8.4, 200, 1000)
+    traceFormatter('fb1hr', 40000, 150, 1000)
     #combineTwoNewTrace(sys.argv[1], sys.argv[2], sys.argv[3])

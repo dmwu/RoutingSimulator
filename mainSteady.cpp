@@ -287,8 +287,8 @@ int main(int argc, char **argv) {
             sub = str.substr(posi + 1, str.length());
             uint64_t volume_bytes;
             if(isDdlFlow>0) {
-                totalTrafficBytes += atof(sub.c_str())*1000;
-                volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000);
+                totalTrafficBytes += atof(sub.c_str())*1000*2;
+                volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000*2);
             }else{
                 totalTrafficBytes += atof(sub.c_str())*1000*1000;
                 volume_bytes = (uint64_t) (atof(sub.c_str()) / mappers.size() * 1000000);
@@ -315,7 +315,7 @@ int main(int argc, char **argv) {
         }
     }
     cout<<"TotalTrafficKB:"<<totalTrafficBytes/1000<<" TotalTime:"<<lastArrivalTime
-        <<" load:"<<Topology::getLoad(lastArrivalTime, totalTrafficBytes)<<endl;
+        <<" load:"<<Topology::getLoad(lastArrivalTime, totalTrafficBytes/1000)<<endl;
 
     tcpRtxScanner.StartFrom(timeFromMs(simStartingTime_ms));
     // GO!

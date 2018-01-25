@@ -74,7 +74,7 @@ void MultipleSteadyFailures::setRandomSwitchFailure(int num, int pos) {
             _givenFailedSwitches->insert(sid);
         }
     } else if (pos == 1) {
-        //std::random_shuffle(_aggSwitches->begin(), _aggSwitches->end(), Topology::myrandom);
+        std::random_shuffle(_aggSwitches->begin(), _aggSwitches->end(), Topology::myrandom);
         for (int i = 0; i < num; i++) {
             int sid = _aggSwitches->at(i);
             _givenFailedSwitches->insert(sid);

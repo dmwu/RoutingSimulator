@@ -104,8 +104,8 @@ int main(int argc, char **argv) {
     std::srand (0);
 
     int totalFlows = 0;
-    double failureStartingTimeMs = 3;
-    double failureDurationSec = 2000;
+    double failureStartingTimeMs = 0.3;
+    double failureDurationSec = 100;
 
     double totalTrafficBytes = 0;
     double lastArrivalTime =0;
