@@ -27,6 +27,7 @@
 #include "topology.h"
 #include "fat_tree_topology.h"
 #include "F10.h"
+#include "AspenTree.h"
 #include "main.h"
 
 // TOPOLOGY TO USE
@@ -203,16 +204,25 @@ int main(int argc, char **argv) {
     Topology *top = NULL;
 
     MultipleSteadyFailures* multipleSteadyLinkFailures= nullptr;
-    if (topology <= 1) {
+    if (topology ==0) {
         top = new FatTreeTopology(&eventlist);
-        multipleSteadyLinkFailures = new MultipleSteadyFailures(&eventlist,top);
-        if (topology == 1) {
-            multipleSteadyLinkFailures->_useShareBackup=true;
-        }
-    } else {
-        top = new F10Topology(&eventlist);
-        multipleSteadyLinkFailures = new MultipleSteadyFailures(&eventlist,top);
+
+    }else if(topology==1){
+        top = new FatTreeTopology(&eventlist);
     }
+    else if(topology==2) {
+        top = new F10Topology(&eventlist);
+
+    }else{
+        top = new AspenTree(&eventlist);
+
+    }
+    multipleSteadyLinkFailures = new MultipleSteadyFailures(&eventlist,top);
+
+    if(topology==1){
+        multipleSteadyLinkFailures->_useShareBackup=true;
+    }
+
     multipleSteadyLinkFailures->setRandomLinkFailures(failedLinkNum, failureLocation);
     multipleSteadyLinkFailures->setRandomSwitchFailure(failedSwitchNum, failureLocation);
     for(int i:failedLinks){
